@@ -41,9 +41,15 @@ const upload = multer({
 });
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    "http://localhost:3000",
+    "https://ojada-bank-frontend.vercel.app",
+    "https://www.ojadabank.com",
+    "https://ojadabank.com"
+  ],
   credentials: true
 }));
+
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
