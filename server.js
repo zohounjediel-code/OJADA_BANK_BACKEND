@@ -4,6 +4,7 @@ const cors = require('cors');
 const { initDatabase } = require('./config/database');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // Debug : vérifier que .env est chargé
