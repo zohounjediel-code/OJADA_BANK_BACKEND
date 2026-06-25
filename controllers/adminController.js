@@ -748,7 +748,7 @@ const assignIbanBic = async (req, res) => {
     const iban = client_iban.replace(/\s/g, '').toUpperCase();
     const bic  = client_bic.trim().toUpperCase();
 
-    if (iban.length < 14 || iban.length > 34 /*|| !/^[A-Z]{2}/.test(iban)*/) {
+    if (iban.length < 14 || iban.length > 34 || !/^[A-Z]{2}/.test(iban)) {
       return res.status(400).json({ success: false, message: 'Format IBAN invalide.' });
     }
     if (!/^[A-Z0-9]{4,11}$/.test(bic)) {
