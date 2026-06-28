@@ -709,7 +709,7 @@ const getDocuments = async (req, res) => {
 };
 
 // ─── CATÉGORIE DE COMPTE ─────────────────────────────────────────
-const ACCOUNT_CATEGORIES = ['basic', 'basic_plus', 'premium', 'premium_plus', 'vip', 'vip_plus'];
+const ACCOUNT_CATEGORIES = ['basic_moins', 'basic', 'basic_plus', 'premium', 'premium_plus', 'vip', 'vip_plus'];
 
 const updateAccountCategory = async (req, res) => {
   try {

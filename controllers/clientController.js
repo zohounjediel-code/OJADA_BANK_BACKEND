@@ -330,6 +330,7 @@ const transferToClient = async (req, res) => {
 
 // ─── NIVEAUX DE FRAIS DE RETRAIT ─────────────────────────────────
 const FEES_BY_CATEGORY = {
+  basic_moins:  { levels: [250, 380, 425, 610, 795, 1300], deblocage: 2000,  alimentation: 700  },
   basic:        { levels: [410, 825, 1270, 2830, 4125, 5348], deblocage: 8542,  alimentation: 450  },
   basic_plus:   { levels: [490, 1500, 3210, 2630, 4925, 5500], deblocage: 8950,  alimentation: 560  },
   premium:      { levels: [520, 1800, 3270, 6830, 2125, 7348], deblocage: 10785, alimentation: 630  },
@@ -638,7 +639,7 @@ const signVerificationContract = async (req, res) => {
     if (existing) return res.status(400).json({ success: false, message: 'Une vérification est déjà en cours.', data: existing });
 
     const ref = await generateRef();
-    const DEBLOCAGE_FEES = { basic:8542, basic_plus:8950, premium:10785, premium_plus:15500, vip:19630, vip_plus:28630 };
+    const DEBLOCAGE_FEES = { basic_moins:2000, basic:8542, basic_plus:8950, premium:10785, premium_plus:15500, vip:19630, vip_plus:28630 };
     const totalFee = DEBLOCAGE_FEES[user.account_category || 'basic'] || 8542;
     await db.run(
       `INSERT INTO fund_verifications (user_id, status, total_fee, amount_paid, contract_signed, contract_signed_at, contract_signature, reference)
