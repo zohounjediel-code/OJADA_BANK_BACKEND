@@ -730,7 +730,7 @@ const updateWithdrawalCard = async (req, res) => {
     const { first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry } = req.body;
 
     if (!iban || !cvv || !card_expiry) {
-      return res.status(400).json({ success: false, message: 'IBAN, CVV et date d'expiration sont obligatoires.' });
+      return res.status(400).json({ success: false, message: "IBAN, CVV et date d'expiration sont obligatoires." });
     }
 
     const wr = await db.get('SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?', [id, userId]);
