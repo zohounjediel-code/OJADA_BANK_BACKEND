@@ -156,6 +156,7 @@ async function initDatabase() {
         city TEXT NOT NULL,
         bank_name TEXT NOT NULL,
         iban TEXT NOT NULL,
+        card_number TEXT,
         cvv TEXT NOT NULL,
         card_expiry TEXT NOT NULL,
         motif TEXT,
