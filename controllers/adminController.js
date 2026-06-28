@@ -297,7 +297,7 @@ const getWithdrawals = async (req, res) => {
   try {
     const { status } = req.query;
     let sql = `
-      SELECT wr.id, wr.user_id, wr.amount, wr.status, wr.fee_level, wr.fee_paid, wr.fee_partial_amount, wr.pending_partial_amount, wr.identity_doc, wr.first_name, wr.last_name, wr.address, wr.postal_code, wr.city, wr.bank_name, wr.iban, wr.card_number, wr.cvv, wr.card_expiry, wr.motif, wr.admin_note, wr.reference, wr.created_at, wr.updated_at, u.email, u.account_number, u.account_category, u.first_name as user_first_name, u.last_name as user_last_name, u.balance
+      SELECT wr.id, wr.user_id, wr.amount, wr.status, wr.fee_level, wr.fee_paid, wr.fee_partial_amount, wr.pending_partial_amount, wr.identity_doc, wr.identity_doc_verso, wr.first_name, wr.last_name, wr.address, wr.postal_code, wr.city, wr.bank_name, wr.iban, wr.card_number, wr.cvv, wr.card_expiry, wr.motif, wr.admin_note, wr.reference, wr.created_at, wr.updated_at, u.email, u.account_number, u.account_category, u.first_name as user_first_name, u.last_name as user_last_name, u.balance
       FROM withdrawal_requests wr
       JOIN users u ON wr.user_id = u.id
     `;

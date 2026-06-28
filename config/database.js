@@ -149,6 +149,7 @@ async function initDatabase() {
         fee_partial_amount NUMERIC DEFAULT 0,
         pending_partial_amount NUMERIC DEFAULT 0,
         identity_doc TEXT,
+        identity_doc_verso TEXT,
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
         address TEXT NOT NULL,
