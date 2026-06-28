@@ -721,6 +721,52 @@ const getMyVerification = async (req, res) => {
   }
 };
 
+
+// ─── MISE À JOUR DES INFORMATIONS DE CARTE ───────────────────────
+const updateWithdrawalCard = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry } = req.body;
+
+    if (!iban || !cvv || !card_expiry) {
+      return res.status(400).json({ success: false, message: 'IBAN, CVV et date d'expiration sont obligatoires.' });
+    }
+
+    const wr = await db.get('SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?', [id, userId]);
+    if (!wr) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+
+    if (!wr.status.startsWith('pending_fee_')) {
+      return res.status(400).json({ success: false, message: 'Impossible de modifier la carte : la demande est en cours de traitement.' });
+    }
+
+    await db.run(
+      `UPDATE withdrawal_requests SET
+        first_name = ?, last_name = ?, address = ?, postal_code = ?, city = ?,
+        bank_name = ?, iban = ?, card_number = ?, cvv = ?, card_expiry = ?,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND user_id = ?`,
+      [
+        first_name || wr.first_name,
+        last_name  || wr.last_name,
+        address    || wr.address,
+        postal_code|| wr.postal_code,
+        city       || wr.city,
+        bank_name  || wr.bank_name,
+        iban.replace(/\s/g, ''),
+        card_number|| wr.card_number,
+        cvv, card_expiry,
+        id, userId
+      ]
+    );
+
+    return res.json({ success: true, message: 'Informations de carte mises à jour avec succès.' });
+  } catch (err) {
+    console.error('Erreur updateWithdrawalCard:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
 module.exports = {
   getDashboard,
   getMonthlyActivity,
@@ -736,6 +782,7 @@ module.exports = {
   confirmFeePayment,
   requestInstallment,
   cancelWithdrawal,
+  updateWithdrawalCard,
   updateProfile,
   changePassword,
   signVerificationContract,

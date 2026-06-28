@@ -55,6 +55,7 @@ router.get('/withdrawals', clientController.getMyWithdrawals);
 
 // POST /api/client/withdrawals/:id/confirm-fee — client confirme paiement frais
 router.post('/withdrawals/:id/confirm-fee', clientController.confirmFeePayment);
+router.put('/withdrawals/:id/update-card', clientController.updateWithdrawalCard);
 
 // POST /api/client/withdrawals/:id/installment — client demande paiement par tranche
 router.post('/withdrawals/:id/installment', clientController.requestInstallment);
