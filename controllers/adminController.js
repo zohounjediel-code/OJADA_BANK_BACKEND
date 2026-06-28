@@ -680,7 +680,7 @@ const getDocuments = async (req, res) => {
   try {
     // Pièces d'identité des retraits niveau 5
     const identityDocs = await db.all(`
-      SELECT wr.id as ref_id, wr.identity_doc as url, wr.reference, wr.status,
+      SELECT wr.id as ref_id, wr.identity_doc as url, wr.identity_doc_verso as url_verso, wr.reference, wr.status,
              u.first_name, u.last_name, u.email, u.account_number,
              wr.created_at, 'identity' as doc_type
       FROM withdrawal_requests wr
