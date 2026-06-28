@@ -249,6 +249,9 @@ const transferToClient = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Aucun compte trouvé avec ce numéro.' });
     }
 
+    if (receiver.status === 'pending') {
+      return res.status(400).json({ success: false, message: "Le compte destinataire n'est pas encore validé et ne peut pas recevoir de virement." });
+    }
     if (receiver.status === 'suspended' || receiver.status === 'blocked') {
       return res.status(400).json({ success: false, message: "Le compte destinataire est suspendu." });
     }
