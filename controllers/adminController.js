@@ -462,6 +462,37 @@ const processWithdrawal = async (req, res) => {
       return res.json({ success: true, message: 'Frais niveau ' + (level + 1) + ' validé.' });
     }
 
+    // ── Passage forcé à l'étape suivante (même si les frais ne sont pas encore payés) ──
+    if (action === 'force_advance') {
+      if (!wr.status.startsWith('awaiting_fee_') && !wr.status.startsWith('pending_fee_')) {
+        return res.status(400).json({ success: false, message: 'Statut invalide pour cette action.' });
+      }
+      const level     = parseInt(wr.status.replace('awaiting_fee_', '').replace('pending_fee_', ''));
+      const nextLevel = level + 1;
+
+      if (nextLevel < FEE_LEVELS.length) {
+        await db.run(
+          'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [`pending_fee_${nextLevel}`, nextLevel, admin_note || null, id]
+        );
+        const nextFee = FEE_LEVELS[nextLevel];
+        await createNotification(user.id, 'retrait',
+          `Étape ${level + 1} franchie ⏩`,
+          `Votre dossier a été avancé par notre équipe. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
+        );
+        sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS);
+      } else {
+        await db.run(
+          'UPDATE withdrawal_requests SET status = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          ['awaiting_final', admin_note || null, id]
+        );
+        await createNotification(user.id, 'retrait', 'Dossier passé à l\'étape finale ⏩',
+          'Votre dossier a été avancé par notre équipe. Votre retrait est en cours de traitement final.'
+        );
+      }
+      return res.json({ success: true, message: 'Passage forcé effectué : niveau ' + (level + 1) + ' → ' + (nextLevel < FEE_LEVELS.length ? 'niveau ' + (nextLevel + 1) : 'étape finale') + '.' });
+    }
+
     // ── Approbation finale ──
     if (action === 'approve_final') {
       if (wr.status !== 'awaiting_final') {
