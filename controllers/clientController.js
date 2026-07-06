@@ -261,8 +261,8 @@ const transferToClient = async (req, res) => {
     }
 
     const ref = await generateRef();
-    const description = motif || `Virement vers ${receiver.first_name} ${receiver.last_name}`;
-    const descriptionRecu = motif || `Virement de ${sender.first_name} ${sender.last_name}`;
+    const description = `Virement vers ${receiver.first_name} ${receiver.last_name}` + (motif ? ` — ${motif}` : '');
+    const descriptionRecu = `Virement de ${sender.first_name} ${sender.last_name}` + (motif ? ` — ${motif}` : '');
 
     // Forcer la conversion en Number (SQLite peut retourner des strings)
     const senderBalance   = Number(sender.balance);
