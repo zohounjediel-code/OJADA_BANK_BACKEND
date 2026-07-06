@@ -396,8 +396,8 @@ const processWithdrawal = async (req, res) => {
       if (remaining > 0) {
         // Tranche validée mais pas encore complet → remettre en pending_fee_X avec fee_paid mis à jour
         await db.run(
-          'UPDATE withdrawal_requests SET status = ?, fee_paid = ?, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [`pending_fee_${level}`, newFeePaid, admin_note || null, id]
+          'UPDATE withdrawal_requests SET status = ?, fee_paid = ?, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [`pending_fee_${level}`, newFeePaid, id]
         );
         await createNotification(user.id, 'retrait',
           `Tranche validée ✅ — niveau ${level + 1}`,
@@ -409,8 +409,8 @@ const processWithdrawal = async (req, res) => {
         const nextLevel = level + 1;
         if (nextLevel < FEE_LEVELS.length) {
           await db.run(
-            'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [`pending_fee_${nextLevel}`, nextLevel, admin_note || null, id]
+            'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [`pending_fee_${nextLevel}`, nextLevel, id]
           );
           const nextFee = FEE_LEVELS[nextLevel];
           await createNotification(user.id, 'retrait',
@@ -441,8 +441,8 @@ const processWithdrawal = async (req, res) => {
 
       if (nextLevel < FEE_LEVELS.length) {
         await db.run(
-          'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [`pending_fee_${nextLevel}`, nextLevel, admin_note || null, id]
+          'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, admin_note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [`pending_fee_${nextLevel}`, nextLevel, id]
         );
         const nextFee = FEE_LEVELS[nextLevel];
         await createNotification(user.id, 'retrait',
@@ -472,8 +472,8 @@ const processWithdrawal = async (req, res) => {
 
       if (nextLevel < FEE_LEVELS.length) {
         await db.run(
-          'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          [`pending_fee_${nextLevel}`, nextLevel, admin_note || null, id]
+          'UPDATE withdrawal_requests SET status = ?, fee_level = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [`pending_fee_${nextLevel}`, nextLevel, id]
         );
         const nextFee = FEE_LEVELS[nextLevel];
         await createNotification(user.id, 'retrait',
@@ -658,8 +658,8 @@ const processVerificationPayment = async (req, res) => {
       const isComplete  = remaining <= 0;
 
       await db.run(
-        `UPDATE fund_verifications SET amount_paid = ?, status = ?, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [newAmtPaid, isComplete ? 'completed_pending_unblock' : 'awaiting_payment', admin_note || null, id]
+        `UPDATE fund_verifications SET amount_paid = ?, status = ?, admin_note = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [newAmtPaid, isComplete ? 'completed_pending_unblock' : 'awaiting_payment', id]
       );
 
       if (isComplete) {
