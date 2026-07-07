@@ -801,4 +801,28 @@ const assignIbanBic = async (req, res) => {
   }
 };
 
-module.exports = { getDashboard, getClients, getClientById, updateClientStatus, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic };
+// Envoyer une notification personnalisée à un client
+const sendClientNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, message } = req.body;
+
+    if (!title || !title.trim() || !message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Le titre et le message sont obligatoires.' });
+    }
+
+    const client = await db.get('SELECT id, first_name, last_name FROM users WHERE id = ?', [id]);
+    if (!client) return res.status(404).json({ success: false, message: 'Client introuvable.' });
+
+    const { createNotification } = require('./clientController');
+    await createNotification(client.id, 'admin', title.trim(), message.trim());
+
+    return res.json({ success: true, message: `Notification envoyée à ${client.first_name} ${client.last_name}.` });
+
+  } catch (err) {
+    console.error('Erreur sendClientNotification:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+module.exports = { getDashboard, getClients, getClientById, updateClientStatus, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic, sendClientNotification };

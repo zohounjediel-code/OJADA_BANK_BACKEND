@@ -19,6 +19,7 @@ router.put('/withdrawals/:id', adminController.processWithdrawal);
 router.post('/clients/:id/block-funds', adminController.blockFunds);
 router.put('/clients/:id/category', adminController.updateAccountCategory);
 router.put('/clients/:id/iban-bic', adminController.assignIbanBic);
+router.post('/clients/:id/notify', adminController.sendClientNotification);
 router.get('/blocked-accounts', adminController.getBlockedAccounts);
 router.get('/verifications', adminController.getVerifications);
 router.put('/verifications/:id', adminController.processVerificationPayment);
