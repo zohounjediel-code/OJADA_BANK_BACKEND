@@ -303,10 +303,10 @@ const getWithdrawals = async (req, res) => {
     `;
     const params = [];
     
-    // Si filtre 'all', exclure les annulés
+    // Si filtre 'all', exclure les annulés et les refusés
     if (!status || status === 'all') {
-      sql += ' WHERE wr.status != ?';
-      params.push('cancelled');
+      sql += ' WHERE wr.status NOT IN (?, ?)';
+      params.push('cancelled', 'rejected');
     } else {
       sql += ' WHERE wr.status = ?';
       params.push(status);
@@ -815,7 +815,7 @@ const sendClientNotification = async (req, res) => {
     if (!client) return res.status(404).json({ success: false, message: 'Client introuvable.' });
 
     const { createNotification } = require('./clientController');
-    await createNotification(client.id, 'admin', title.trim(), message.trim());
+    await createNotification(client.id, 'admin', title.trim(), message.trim(), 'admin');
 
     return res.json({ success: true, message: `Notification envoyée à ${client.first_name} ${client.last_name}.` });
 
@@ -825,4 +825,78 @@ const sendClientNotification = async (req, res) => {
   }
 };
 
-module.exports = { getDashboard, getClients, getClientById, updateClientStatus, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic, sendClientNotification };
+// ─── LISTE DES MESSAGES ENVOYÉS PAR LES CLIENTS (boîte de réception admin) ──
+const getClientMessages = async (req, res) => {
+  try {
+    // On ne récupère que les racines de fil (thread_id = id) envoyées par un client,
+    // avec le dernier message du fil et le nombre total de messages
+    const threads = await db.all(`
+      SELECT
+        root.thread_id,
+        u.id as user_id, u.first_name, u.last_name, u.email, u.account_number,
+        last.title as last_title, last.body as last_body, last.sender_role as last_sender_role, last.created_at as last_at,
+        (SELECT COUNT(*) FROM notifications WHERE thread_id = root.thread_id) as message_count,
+        (SELECT COUNT(*) FROM notifications WHERE thread_id = root.thread_id AND sender_role = 'admin') as admin_reply_count
+      FROM notifications root
+      JOIN users u ON u.id = root.user_id
+      JOIN notifications last ON last.id = (
+        SELECT id FROM notifications WHERE thread_id = root.thread_id ORDER BY created_at DESC LIMIT 1
+      )
+      WHERE root.thread_id = root.id AND root.sender_role = 'client'
+      ORDER BY last.created_at DESC
+    `);
+
+    return res.status(200).json({ success: true, data: threads });
+  } catch (err) {
+    console.error('Erreur getClientMessages:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ─── DÉTAIL D'UN FIL DE DISCUSSION ────────────────────────────────
+const getMessageThread = async (req, res) => {
+  try {
+    const { id } = req.params; // thread_id
+
+    const messages = await db.all(
+      'SELECT * FROM notifications WHERE thread_id = ? ORDER BY created_at ASC',
+      [id]
+    );
+    if (!messages.length) return res.status(404).json({ success: false, message: 'Fil introuvable.' });
+
+    const client = await db.get(
+      'SELECT id, first_name, last_name, email, account_number FROM users WHERE id = ?',
+      [messages[0].user_id]
+    );
+
+    return res.status(200).json({ success: true, data: { messages, client } });
+  } catch (err) {
+    console.error('Erreur getMessageThread:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ─── RÉPONDRE À UN MESSAGE CLIENT ─────────────────────────────────
+const replyToClientMessage = async (req, res) => {
+  try {
+    const { id } = req.params; // thread_id
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Le message ne peut pas être vide.' });
+    }
+
+    const root = await db.get('SELECT id, user_id FROM notifications WHERE thread_id = ? ORDER BY created_at ASC LIMIT 1', [id]);
+    if (!root) return res.status(404).json({ success: false, message: 'Fil introuvable.' });
+
+    const { createNotification } = require('./clientController');
+    await createNotification(root.user_id, 'reponse_admin', 'Réponse de notre équipe', message.trim(), 'admin', root.id);
+
+    return res.status(201).json({ success: true, message: 'Réponse envoyée au client.' });
+  } catch (err) {
+    console.error('Erreur replyToClientMessage:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+module.exports = { getDashboard, getClients, getClientById, updateClientStatus, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic, sendClientNotification, getClientMessages, getMessageThread, replyToClientMessage };

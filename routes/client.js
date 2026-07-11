@@ -22,6 +22,12 @@ router.put('/notifications/:id/read', clientController.markNotificationRead);
 // PUT /api/client/notifications/read-all — tout marquer comme lu
 router.put('/notifications/read-all', clientController.markAllRead);
 
+// POST /api/client/messages — envoyer un nouveau message à l'admin
+router.post('/messages', clientController.sendMessageToAdmin);
+
+// POST /api/client/notifications/:id/reply — répondre à une notification (fil de discussion)
+router.post('/notifications/:id/reply', clientController.replyToNotification);
+
 // POST /api/client/transfer — virement vers un autre client
 router.post('/transfer', clientController.transferToClient);
 

@@ -11,12 +11,29 @@ async function generateRef() {
   return ref;
 }
 
-// ─── CRÉER UNE NOTIFICATION ───────────────────────────────────────
-async function createNotification(userId, type, title, body) {
-  await db.run(
-    'INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)',
-    [userId, type, title, body]
+// ─── CRÉER UNE NOTIFICATION (et gérer le fil de discussion) ──────
+// senderRole : 'system' (généré automatiquement), 'admin' (écrit par un admin), 'client' (écrit par un client)
+// parentId   : si fourni, la notification est une réponse dans le fil de la notification parentId
+async function createNotification(userId, type, title, body, senderRole = 'system', parentId = null) {
+  let threadId = null;
+  if (parentId) {
+    const parent = await db.get('SELECT id, thread_id FROM notifications WHERE id = ?', [parentId]);
+    if (parent) threadId = parent.thread_id || parent.id;
+  }
+
+  const result = await db.run(
+    'INSERT INTO notifications (user_id, type, title, body, sender_role, thread_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
+    [userId, type, title, body, senderRole, threadId]
   );
+
+  const newId = result?.lastInsertRowid || result?.rows?.[0]?.id;
+
+  // Si c'est le premier message d'un fil, il devient sa propre racine (permet de retrouver tout le fil via thread_id)
+  if (!threadId && newId) {
+    await db.run('UPDATE notifications SET thread_id = ? WHERE id = ?', [newId, newId]);
+  }
+
+  return newId;
 }
 
 // ─── DASHBOARD CLIENT ─────────────────────────────────────────────
@@ -156,6 +173,45 @@ const getTransactions = async (req, res) => {
 };
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────
+// ─── ENVOYER UN NOUVEAU MESSAGE À L'ADMIN ─────────────────────────
+const sendMessageToAdmin = async (req, res) => {
+  try {
+    const { title, message } = req.body;
+    if (!title || !title.trim() || !message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Le titre et le message sont obligatoires.' });
+    }
+
+    await createNotification(req.user.id, 'message_client', title.trim(), message.trim(), 'client');
+
+    return res.status(201).json({ success: true, message: 'Votre message a été envoyé à notre équipe.' });
+  } catch (err) {
+    console.error('Erreur sendMessageToAdmin:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ─── RÉPONDRE À UNE NOTIFICATION (fil de discussion) ──────────────
+const replyToNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ success: false, message: 'Le message ne peut pas être vide.' });
+    }
+
+    const parent = await db.get('SELECT id FROM notifications WHERE id = ? AND user_id = ?', [id, req.user.id]);
+    if (!parent) return res.status(404).json({ success: false, message: 'Notification introuvable.' });
+
+    await createNotification(req.user.id, 'reponse_client', 'Réponse', message.trim(), 'client', parent.id);
+
+    return res.status(201).json({ success: true, message: 'Réponse envoyée.' });
+  } catch (err) {
+    console.error('Erreur replyToNotification:', err);
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
 const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -775,6 +831,8 @@ module.exports = {
   getNotifications,
   markNotificationRead,
   markAllRead,
+  sendMessageToAdmin,
+  replyToNotification,
   createNotification,
   generateRef,
   transferToClient,
