@@ -9,6 +9,7 @@ router.get('/dashboard', adminController.getDashboard);
 router.get('/clients', adminController.getClients);
 router.get('/clients/:id', adminController.getClientById);
 router.put('/clients/:id/status', adminController.updateClientStatus);
+router.delete('/clients/:id', adminController.deleteClient);
 router.get('/transactions', adminController.getTransactions);
 router.get('/stats', adminController.getStats);
 router.post('/transfer', adminController.transferFunds);

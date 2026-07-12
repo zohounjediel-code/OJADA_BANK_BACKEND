@@ -98,6 +98,17 @@ const loginClient = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect.' });
     }
 
+    if (['rejected', 'deleted', 'suspended', 'blocked'].includes(user.status)) {
+      await db.run('INSERT INTO login_logs (user_id, email, role, ip, success) VALUES (?, ?, ?, ?, ?)', [user.id, email, 'client', req.ip, 0]);
+      const messages = {
+        rejected: "Votre demande d'inscription a été refusée. Contactez notre support pour plus d'informations.",
+        deleted: 'Ce compte a été fermé. Contactez notre support pour plus d\'informations.',
+        suspended: 'Votre compte est actuellement suspendu. Contactez notre support.',
+        blocked: 'Votre compte est bloqué. Contactez notre support.',
+      };
+      return res.status(403).json({ success: false, message: messages[user.status] });
+    }
+
     await db.run('INSERT INTO login_logs (user_id, email, role, ip, success) VALUES (?, ?, ?, ?, ?)', [user.id, email, 'client', req.ip, 1]);
 
     const token = jwt.sign(

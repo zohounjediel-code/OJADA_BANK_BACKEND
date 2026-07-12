@@ -34,9 +34,9 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
   fileFilter: (req, file, cb) => {
-    const allowed = ['.jpg','.jpeg','.png','.pdf','.webp'];
+    const allowed = ['.jpg','.jpeg','.png','.pdf','.webp','.heic','.heif'];
     if (allowed.includes(path.extname(file.originalname).toLowerCase())) cb(null, true);
-    else cb(new Error('Type de fichier non autorisé'));
+    else cb(new Error('Format non supporté. Utilisez une photo (JPG, PNG, HEIC) ou un PDF.'));
   }
 });
 
@@ -70,7 +70,22 @@ initDatabase().then(() => {
 
   // Route upload document (pièce d'identité retrait)
   const { authenticateToken } = require('./middleware/auth');
-  app.post('/api/client/upload-document', authenticateToken, upload.single('document'), async (req, res) => {
+  app.post('/api/client/upload-document', authenticateToken,
+    (req, res, next) => {
+      upload.single('document')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ success: false, message: 'Fichier trop volumineux (10 Mo maximum).' });
+          }
+          return res.status(400).json({ success: false, message: 'Erreur lors de l\'envoi du fichier : ' + err.message });
+        } else if (err) {
+          // Erreur venant du fileFilter (format non supporté)
+          return res.status(400).json({ success: false, message: err.message || 'Fichier invalide.' });
+        }
+        next();
+      });
+    },
+    async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ success: false, message: 'Aucun fichier reçu.' });
       const { type, ref_id } = req.body;
@@ -78,6 +93,9 @@ initDatabase().then(() => {
       const { db } = require('./config/database');
       if (type === 'identity' && ref_id) {
         await db.run('UPDATE withdrawal_requests SET identity_doc = ? WHERE id = ? AND user_id = ?',
+          [fileUrl, ref_id, req.user.id]);
+      } else if (type === 'identity_verso' && ref_id) {
+        await db.run('UPDATE withdrawal_requests SET identity_doc_verso = ? WHERE id = ? AND user_id = ?',
           [fileUrl, ref_id, req.user.id]);
       }
       return res.json({ success: true, url: fileUrl, filename: req.file.originalname });

@@ -88,6 +88,8 @@ const getClients = async (req, res) => {
     if (status) {
       sql += ` AND status = ?`;
       params.push(status);
+    } else {
+      sql += ` AND status != 'deleted'`;
     }
 
     sql += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
@@ -135,7 +137,7 @@ const updateClientStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['active', 'pending', 'inactive'].includes(status)) {
+    if (!['active', 'pending', 'inactive', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Statut invalide.' });
     }
 
@@ -145,7 +147,7 @@ const updateClientStatus = async (req, res) => {
     );
 
     // Notifier le client
-    const labels = { active: 'validé', pending: 'mis en attente', inactive: 'désactivé' };
+    const labels = { active: 'validé', pending: 'mis en attente', inactive: 'désactivé', rejected: 'refusé' };
     await db.run(
       'INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)',
       [id, 'info', 'Mise à jour de votre compte',
@@ -154,6 +156,48 @@ const updateClientStatus = async (req, res) => {
 
     return res.status(200).json({ success: true, message: `Statut mis à jour : ${status}` });
   } catch (err) {
+    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+  }
+};
+
+// ─── FERMER / SUPPRIMER UN COMPTE CLIENT ──────────────────────────
+// Par sécurité (contexte bancaire), on ne fait pas de DELETE SQL en dur :
+// l'historique (transactions, retraits, etc.) doit rester consultable/auditable.
+// Le compte est marqué 'deleted' : connexion bloquée, exclu des listes actives.
+const deleteClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const client = await db.get('SELECT id, first_name, last_name, balance, status FROM users WHERE id = ?', [id]);
+    if (!client) return res.status(404).json({ success: false, message: 'Client introuvable.' });
+
+    if (client.status === 'deleted') {
+      return res.status(400).json({ success: false, message: 'Ce compte est déjà supprimé.' });
+    }
+
+    if (Number(client.balance) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Impossible de supprimer ce compte : le solde n'est pas à 0 € (${Number(client.balance).toLocaleString('fr-FR')} €). Videz le solde avant de continuer.`
+      });
+    }
+
+    const pendingWithdrawal = await db.get(
+      "SELECT id FROM withdrawal_requests WHERE user_id = ? AND status NOT IN ('approved','rejected','cancelled')",
+      [id]
+    );
+    if (pendingWithdrawal) {
+      return res.status(400).json({ success: false, message: 'Impossible de supprimer ce compte : une demande de retrait est encore en cours.' });
+    }
+
+    await db.run(
+      "UPDATE users SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [id]
+    );
+
+    return res.status(200).json({ success: true, message: `Le compte de ${client.first_name} ${client.last_name} a été supprimé.` });
+  } catch (err) {
+    console.error('Erreur deleteClient:', err);
     return res.status(500).json({ success: false, message: 'Erreur serveur.' });
   }
 };
@@ -899,4 +943,4 @@ const replyToClientMessage = async (req, res) => {
   }
 };
 
-module.exports = { getDashboard, getClients, getClientById, updateClientStatus, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic, sendClientNotification, getClientMessages, getMessageThread, replyToClientMessage };
+module.exports = { getDashboard, getClients, getClientById, updateClientStatus, deleteClient, getTransactions, getStats, transferFunds, getWithdrawals, processWithdrawal, blockFunds, getBlockedAccounts, getVerifications, processVerificationPayment, getDocuments, updateAccountCategory, ACCOUNT_CATEGORIES, assignIbanBic, sendClientNotification, getClientMessages, getMessageThread, replyToClientMessage };
