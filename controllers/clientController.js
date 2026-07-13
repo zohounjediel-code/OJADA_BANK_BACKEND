@@ -507,7 +507,7 @@ const submitWithdrawal = async (req, res) => {
     const { amount, first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry, motif } = req.body;
 
     // Validation champs requis
-    if (!amount || !first_name || !last_name || !phone || !address || !postal_code || !city || !bank_name || !iban || !cvv || !card_expiry) {
+    if (!amount || !first_name || !last_name || !phone || !address || !postal_code || !city || !bank_name || !iban || !card_number || !cvv || !card_expiry) {
       return res.status(400).json({ success: false, message: 'Tous les champs obligatoires doivent être renseignés.' });
     }
     const amt = Number(amount);
