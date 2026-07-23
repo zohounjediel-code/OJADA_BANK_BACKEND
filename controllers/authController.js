@@ -3,19 +3,21 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { db, generateAccountNumber } = require('../config/database');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/email');
+const { t, detectLang } = require('../utils/i18n');
 
 // ─── INSCRIPTION CLIENT ───────────────────────────────────────────
 const register = async (req, res) => {
   try {
     const { email, password, first_name, last_name, phone, address, city, postal_code } = req.body;
+    const lang = detectLang(req);
 
     if (!email.toLowerCase().endsWith('@gmail.com')) {
-      return res.status(400).json({ success: false, message: 'Seules les adresses Gmail (@gmail.com) sont acceptées.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_email_not_gmail') });
     }
 
     const existingUser = await db.get('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
     if (existingUser) {
-      return res.status(409).json({ success: false, message: 'Un compte existe déjà avec cette adresse email.' });
+      return res.status(409).json({ success: false, message: t(req, 'err_email_exists') });
     }
 
     const salt = await bcrypt.genSalt(12);
@@ -23,8 +25,8 @@ const register = async (req, res) => {
     const accountNumber = await generateAccountNumber();
 
     const result = await db.run(
-      `INSERT INTO users (email, password, first_name, last_name, phone, address, city, postal_code, account_number)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO users (email, password, first_name, last_name, phone, address, city, postal_code, account_number, preferred_language)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [
         email.toLowerCase(),
         hashedPassword,
@@ -34,7 +36,8 @@ const register = async (req, res) => {
         address ? address.trim() : null,
         city ? city.trim() : null,
         postal_code ? postal_code.trim() : null,
-        accountNumber
+        accountNumber,
+        lang
       ]
     );
 
@@ -47,18 +50,19 @@ const register = async (req, res) => {
       address: address.trim(),
       city: city.trim(),
       postal_code: postal_code.trim(),
-      account_number: accountNumber
+      account_number: accountNumber,
+      preferred_language: lang
     };
 
-    sendWelcomeEmail(newUser);
+    sendWelcomeEmail(newUser, lang);
 
-    // Créer une notification de bienvenue
+    // Créer une notification de bienvenue (dans la langue choisie à l'inscription)
     const { createNotification } = require('./clientController');
     await createNotification(
       result.lastInsertRowid,
       'bienvenue',
-      'Bienvenue chez OJADA BANK 🎉',
-      `Bonjour ${first_name.trim()} ! Votre compte ${accountNumber} a été créé avec succès. Il sera validé après vérification sous 24h.`
+      t(req, 'welcome_notif_title'),
+      t(req, 'welcome_notif_body', { name: first_name.trim(), account: accountNumber })
     );
 
     const token = jwt.sign(
@@ -69,14 +73,14 @@ const register = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Compte créé avec succès ! Un email de bienvenue vous a été envoyé.',
+      message: t(req, 'register_success'),
       token,
       user: { ...newUser, role: 'client', status: 'pending' }
     });
 
   } catch (err) {
     console.error('Erreur register:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur. Veuillez réessayer.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -89,24 +93,19 @@ const loginClient = async (req, res) => {
 
     if (!user) {
       await db.run('INSERT INTO login_logs (email, role, ip, success) VALUES (?, ?, ?, ?)', [email, 'client', req.ip, 0]);
-      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect.' });
+      return res.status(401).json({ success: false, message: t(req, 'err_login_invalid') });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       await db.run('INSERT INTO login_logs (user_id, email, role, ip, success) VALUES (?, ?, ?, ?, ?)', [user.id, email, 'client', req.ip, 0]);
-      return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect.' });
+      return res.status(401).json({ success: false, message: t(req, 'err_login_invalid') });
     }
 
     if (['rejected', 'deleted', 'suspended', 'blocked'].includes(user.status)) {
       await db.run('INSERT INTO login_logs (user_id, email, role, ip, success) VALUES (?, ?, ?, ?, ?)', [user.id, email, 'client', req.ip, 0]);
-      const messages = {
-        rejected: "Votre demande d'inscription a été refusée. Contactez notre support pour plus d'informations.",
-        deleted: 'Ce compte a été fermé. Contactez notre support pour plus d\'informations.',
-        suspended: 'Votre compte est actuellement suspendu. Contactez notre support.',
-        blocked: 'Votre compte est bloqué. Contactez notre support.',
-      };
-      return res.status(403).json({ success: false, message: messages[user.status] });
+      req.user = user; // pour que detectLang() puisse utiliser la langue préférée du compte
+      return res.status(403).json({ success: false, message: t(req, `err_status_${user.status}`) });
     }
 
     await db.run('INSERT INTO login_logs (user_id, email, role, ip, success) VALUES (?, ?, ?, ?, ?)', [user.id, email, 'client', req.ip, 1]);
@@ -117,9 +116,10 @@ const loginClient = async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
+    req.user = user;
     return res.status(200).json({
       success: true,
-      message: 'Connexion réussie.',
+      message: t(req, 'login_success'),
       token,
       user: {
         id: user.id, email: user.email, first_name: user.first_name,
@@ -127,13 +127,14 @@ const loginClient = async (req, res) => {
         city: user.city, postal_code: user.postal_code,
         account_number: user.account_number, account_type: user.account_type,
         balance: user.balance, status: user.status, role: 'client',
+        preferred_language: user.preferred_language,
         created_at: user.created_at
       }
     });
 
   } catch (err) {
     console.error('Erreur loginClient:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur. Veuillez réessayer.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -151,7 +152,7 @@ const loginAdmin = async (req, res) => {
 
     if (!validUsername || !validPassword) {
       await db.run('INSERT INTO login_logs (email, role, ip, success) VALUES (?, ?, ?, ?)', [username, 'admin', req.ip, 0]);
-      return res.status(401).json({ success: false, message: 'Identifiants administrateur incorrects.' });
+      return res.status(401).json({ success: false, message: t(req, 'err_admin_invalid') });
     }
 
     await db.run('INSERT INTO login_logs (email, role, ip, success) VALUES (?, ?, ?, ?)', [username, 'admin', req.ip, 1]);
@@ -164,14 +165,14 @@ const loginAdmin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Connexion administrateur réussie.',
+      message: t(req, 'admin_login_success'),
       token,
       user: { username: ADMIN_USERNAME, role: 'admin' }
     });
 
   } catch (err) {
     console.error('Erreur loginAdmin:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur. Veuillez réessayer.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -179,10 +180,10 @@ const loginAdmin = async (req, res) => {
 const logout = async (req, res) => {
   try {
     await db.run('INSERT INTO blacklisted_tokens (token) VALUES ($1) ON CONFLICT (token) DO NOTHING', [req.token]);
-    return res.status(200).json({ success: true, message: 'Déconnexion réussie.' });
+    return res.status(200).json({ success: true, message: t(req, 'logout_success') });
   } catch (err) {
     console.error('Erreur logout:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -190,7 +191,7 @@ const logout = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await db.get('SELECT id, email, first_name FROM users WHERE email = ?', [email.toLowerCase()]);
+    const user = await db.get('SELECT id, email, first_name, preferred_language FROM users WHERE email = ?', [email.toLowerCase()]);
 
     if (user) {
       await db.run('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0', [user.id]);
@@ -203,17 +204,17 @@ const forgotPassword = async (req, res) => {
         [user.id, resetToken, expiresAt]
       );
 
-      await sendPasswordResetEmail(user, resetToken);
+      await sendPasswordResetEmail(user, resetToken, user.preferred_language || detectLang(req));
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Si un compte existe avec cette adresse, un email de réinitialisation a été envoyé.'
+      message: t(req, 'forgot_password_sent')
     });
 
   } catch (err) {
     console.error('Erreur forgotPassword:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -230,7 +231,7 @@ const resetPassword = async (req, res) => {
     `, [token]);
 
     if (!resetRecord) {
-      return res.status(400).json({ success: false, message: 'Lien de réinitialisation invalide ou expiré.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_reset_invalid') });
     }
 
     const salt = await bcrypt.genSalt(12);
@@ -239,11 +240,11 @@ const resetPassword = async (req, res) => {
     await db.run('UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [hashedPassword, resetRecord.user_id]);
     await db.run('UPDATE password_reset_tokens SET used = 1 WHERE id = ?', [resetRecord.id]);
 
-    return res.status(200).json({ success: true, message: 'Mot de passe réinitialisé avec succès.' });
+    return res.status(200).json({ success: true, message: t(req, 'reset_success') });
 
   } catch (err) {
     console.error('Erreur resetPassword:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -256,11 +257,11 @@ const verifyResetToken = async (req, res) => {
       [token]
     );
 
-    if (!record) return res.status(400).json({ success: false, message: 'Lien invalide ou expiré.' });
-    return res.status(200).json({ success: true, message: 'Token valide.' });
+    if (!record) return res.status(400).json({ success: false, message: t(req, 'err_token_invalid') });
+    return res.status(200).json({ success: true, message: t(req, 'token_valid') });
 
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -272,15 +273,15 @@ const getMe = async (req, res) => {
     }
 
     const user = await db.get(
-      'SELECT id, email, first_name, last_name, phone, address, city, postal_code, account_number, account_type, balance, status, created_at FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, phone, address, city, postal_code, account_number, account_type, balance, status, preferred_language, created_at FROM users WHERE id = ?',
       [req.user.id]
     );
 
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+    if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
     return res.status(200).json({ success: true, user: { ...user, role: 'client' } });
 
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 

@@ -287,7 +287,7 @@ const transferFunds = async (req, res) => {
 
     // Vérifier que le client existe
     const client = await db.get(
-      'SELECT id, email, first_name, last_name, account_number, balance FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, account_number, balance, preferred_language FROM users WHERE id = ?',
       [client_id]
     );
     if (!client) {
@@ -319,8 +319,8 @@ const transferFunds = async (req, res) => {
        `Vous avez reçu +${amt.toLocaleString('fr-FR')} € de l'administration OJADA BANK.${note ? ` Motif : ${note}` : ''} Votre nouveau solde est de ${newBalance.toLocaleString('fr-FR')} €.`]
     );
 
-    // Envoyer un email au client
-    sendFundsReceivedEmail(client, amt, note, newBalance);
+    // Envoyer un email au client (dans sa langue préférée)
+    sendFundsReceivedEmail(client, amt, note, newBalance, null, client.preferred_language || 'fr');
 
     return res.status(200).json({
       success: true,
@@ -397,7 +397,7 @@ const processWithdrawal = async (req, res) => {
       await createNotification(user.id, 'retrait', 'Retrait refusé ❌',
         'Votre demande de retrait a été refusée.' + (admin_note ? ' Motif : ' + admin_note : '')
       );
-      sendWithdrawalStatusEmail(user, Number(wr.amount), 'rejected', admin_note || null, Number(user.balance));
+      sendWithdrawalStatusEmail(user, Number(wr.amount), 'rejected', admin_note || null, Number(user.balance), undefined, undefined, undefined, user.preferred_language || 'fr');
       return res.json({ success: true, message: 'Demande refusée.' });
     }
 
@@ -461,7 +461,7 @@ const processWithdrawal = async (req, res) => {
             `Frais niveau ${level + 1} complétés ✅`,
             `Tous les paiements du niveau ${level + 1} ont été validés. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
           );
-          sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS);
+          sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
         } else {
           await db.run(
             'UPDATE withdrawal_requests SET status = ?, fee_paid = 0, fee_partial_amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -493,7 +493,7 @@ const processWithdrawal = async (req, res) => {
           `Frais niveau ${level + 1} validé ✅`,
           `Paiement confirmé. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
         );
-        sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS);
+        sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
       } else {
         await db.run(
           'UPDATE withdrawal_requests SET status = ?, fee_paid = 0, fee_partial_amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -524,7 +524,7 @@ const processWithdrawal = async (req, res) => {
           `Étape ${level + 1} franchie ⏩`,
           `Votre dossier a été avancé par notre équipe. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
         );
-        sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS);
+        sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
       } else {
         await db.run(
           'UPDATE withdrawal_requests SET status = ?, fee_paid = 0, fee_partial_amount = 0, pending_partial_amount = 0, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -560,7 +560,7 @@ const processWithdrawal = async (req, res) => {
       await createNotification(user.id, 'retrait', 'Retrait validé ✅',
         'Votre retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été effectué. Nouveau solde : ' + newBalance.toLocaleString('fr-FR') + ' €.'
       );
-      sendWithdrawalStatusEmail(user, Number(wr.amount), 'approved', admin_note || null, newBalance);
+      sendWithdrawalStatusEmail(user, Number(wr.amount), 'approved', admin_note || null, newBalance, undefined, undefined, undefined, user.preferred_language || 'fr');
       return res.json({ success: true, message: 'Retrait approuvé et solde débité.' });
     }
 

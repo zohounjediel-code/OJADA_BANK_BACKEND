@@ -281,7 +281,7 @@ const transferToClient = async (req, res) => {
     const amt = Number(amount);
 
     const sender = await db.get(
-      'SELECT id, email, first_name, last_name, account_number, balance, status FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, account_number, balance, status, preferred_language FROM users WHERE id = ?',
       [senderId]
     );
 
@@ -297,7 +297,7 @@ const transferToClient = async (req, res) => {
     }
 
     const receiver = await db.get(
-      "SELECT id, email, first_name, last_name, account_number, balance, status FROM users WHERE account_number = ?",
+      "SELECT id, email, first_name, last_name, account_number, balance, status, preferred_language FROM users WHERE account_number = ?",
       [account_number]
     );
 
@@ -361,8 +361,8 @@ const transferToClient = async (req, res) => {
       `Vous avez reçu ${amt.toLocaleString('fr-FR')} € de ${sender.first_name} ${sender.last_name}.`
     );
 
-    // Envoyer l'email de réception au destinataire
-    sendFundsReceivedEmail(receiver, amt, motif || null, newReceiverBalance, sender.first_name + ' ' + sender.last_name);
+    // Envoyer l'email de réception au destinataire (dans sa langue préférée)
+    sendFundsReceivedEmail(receiver, amt, motif || null, newReceiverBalance, sender.first_name + ' ' + sender.last_name, receiver.preferred_language || 'fr');
 
     return res.status(200).json({
       success: true,
@@ -516,7 +516,7 @@ const submitWithdrawal = async (req, res) => {
     }
 
     // Vérifier le solde
-    const user = await db.get('SELECT id, email, first_name, last_name, account_number, balance, status FROM users WHERE id = ?', [userId]);
+    const user = await db.get('SELECT id, email, first_name, last_name, account_number, balance, status, preferred_language FROM users WHERE id = ?', [userId]);
     if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
     if (user.funds_blocked) {
       return res.status(403).json({ success: false, message: 'Vos fonds sont bloqués. Vous ne pouvez pas effectuer de retrait.' });
@@ -545,8 +545,8 @@ const submitWithdrawal = async (req, res) => {
       `Votre demande de retrait de ${amt.toLocaleString('fr-FR')} € est en attente de validation.`
     );
 
-    // Email de confirmation
-    sendWithdrawalRequestEmail(user, amt, ref);
+    // Email de confirmation (dans la langue préférée du client)
+    sendWithdrawalRequestEmail(user, amt, ref, user.preferred_language || 'fr');
 
     const newWR = await db.get('SELECT id FROM withdrawal_requests WHERE reference = ?', [ref]);
     return res.status(201).json({ success: true, message: 'Demande de retrait soumise avec succès.', data: { reference: ref, id: newWR?.id } });

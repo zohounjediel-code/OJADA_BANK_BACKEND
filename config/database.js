@@ -74,6 +74,7 @@ async function initDatabase() {
         funds_blocked INTEGER DEFAULT 0,
         funds_block_reason TEXT,
         funds_blocked_at TIMESTAMP,
+        preferred_language TEXT DEFAULT 'fr',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -121,6 +122,8 @@ async function initDatabase() {
         title TEXT NOT NULL,
         body TEXT NOT NULL,
         read INTEGER DEFAULT 0,
+        sender_role TEXT DEFAULT 'system',
+        thread_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -152,6 +155,7 @@ async function initDatabase() {
         identity_doc_verso TEXT,
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
+        phone TEXT,
         address TEXT NOT NULL,
         postal_code TEXT NOT NULL,
         city TEXT NOT NULL,
