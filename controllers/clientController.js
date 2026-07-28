@@ -319,6 +319,10 @@ const transferToClient = async (req, res) => {
     const ref = await generateRef();
     const description = `Virement vers ${receiver.first_name} ${receiver.last_name}` + (motif ? ` — ${motif}` : '');
     const descriptionRecu = `Virement de ${sender.first_name} ${sender.last_name}` + (motif ? ` — ${motif}` : '');
+    // Description structurée (clé + variables) pour permettre une traduction fidèle à l'affichage,
+    // quelle que soit la langue active du lecteur au moment où il consulte la transaction.
+    const paramsSent = JSON.stringify({ name: `${receiver.first_name} ${receiver.last_name}`, motif: motif || null });
+    const paramsReceived = JSON.stringify({ name: `${sender.first_name} ${sender.last_name}`, motif: motif || null });
 
     // Forcer la conversion en Number (SQLite peut retourner des strings)
     const senderBalance   = Number(sender.balance);
@@ -337,16 +341,16 @@ const transferToClient = async (req, res) => {
     );
 
     await db.run(
-      `INSERT INTO transactions (user_id, type, amount, description, status, reference)
-       VALUES (?, 'virement', ?, ?, 'valide', ?)`,
-      [senderId, amt, description, ref]
+      `INSERT INTO transactions (user_id, type, amount, description, description_key, description_params, status, reference)
+       VALUES (?, 'virement', ?, ?, 'virement_vers', ?, 'valide', ?)`,
+      [senderId, amt, description, paramsSent, ref]
     );
 
     const refReceiver = await generateRef();
     await db.run(
-      `INSERT INTO transactions (user_id, type, amount, description, status, reference)
-       VALUES (?, 'virement', ?, ?, 'valide', ?)`,
-      [receiver.id, amt, descriptionRecu, refReceiver]
+      `INSERT INTO transactions (user_id, type, amount, description, description_key, description_params, status, reference)
+       VALUES (?, 'virement', ?, ?, 'virement_de', ?, 'valide', ?)`,
+      [receiver.id, amt, descriptionRecu, paramsReceived, refReceiver]
     );
 
     await createNotification(

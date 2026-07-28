@@ -306,10 +306,13 @@ const transferFunds = async (req, res) => {
     // Créer la transaction
     const year = new Date().getFullYear();
     const ref = `TXN-${year}-${Math.floor(Math.random() * 90000) + 10000}`;
+    // Si l'admin a saisi une note personnalisée, elle remplace le texte entièrement (texte libre,
+    // non traduisible). Sinon on utilise la description structurée standard (traduisible à l'affichage).
+    const descKey = note ? null : 'admin_deposit';
     await db.run(
-      `INSERT INTO transactions (user_id, type, amount, description, status, reference)
-       VALUES (?, 'depot', ?, ?, 'valide', ?)`,
-      [client_id, amt, note || 'Virement de l\'administration OJADA BANK', ref]
+      `INSERT INTO transactions (user_id, type, amount, description, description_key, status, reference)
+       VALUES (?, 'depot', ?, ?, ?, 'valide', ?)`,
+      [client_id, amt, note || 'Virement de l\'administration OJADA BANK', descKey, ref]
     );
 
     // Créer une notification pour le client
@@ -550,8 +553,8 @@ const processWithdrawal = async (req, res) => {
       const { generateRef } = require('./clientController');
       const ref = await generateRef();
       await db.run(
-        "INSERT INTO transactions (user_id, type, amount, description, status, reference) VALUES (?, 'retrait', ?, ?, 'valide', ?)",
-        [user.id, wr.amount, 'Retrait SEPA — ' + wr.bank_name + ' (···' + wr.iban.slice(-4) + ')', ref]
+        "INSERT INTO transactions (user_id, type, amount, description, description_key, description_params, status, reference) VALUES (?, 'retrait', ?, ?, ?, ?, 'valide', ?)",
+        [user.id, wr.amount, 'Retrait SEPA — ' + wr.bank_name + ' (···' + wr.iban.slice(-4) + ')', 'retrait_sepa', JSON.stringify({ bank: wr.bank_name, last4: wr.iban.slice(-4) }), ref]
       );
       await db.run(
         'UPDATE withdrawal_requests SET status = ?, admin_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',

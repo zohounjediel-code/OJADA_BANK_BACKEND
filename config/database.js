@@ -110,6 +110,8 @@ async function initDatabase() {
         type TEXT NOT NULL,
         amount NUMERIC NOT NULL,
         description TEXT,
+        description_key TEXT,
+        description_params TEXT,
         status TEXT DEFAULT 'valide',
         reference TEXT UNIQUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
