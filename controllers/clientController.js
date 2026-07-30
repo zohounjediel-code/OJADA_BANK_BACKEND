@@ -1,5 +1,6 @@
 const { db } = require('../config/database');
 const { sendFundsReceivedEmail } = require('../utils/email');
+const { t } = require('../utils/i18n');
 
 // ─── GÉNÉRATION RÉFÉRENCE TRANSACTION ────────────────────────────
 async function generateRef() {
@@ -50,7 +51,7 @@ const getDashboard = async (req, res) => {
       [userId]
     );
 
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+    if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
 
     // Dernières transactions (5)
     const recentTransactions = await db.all(
@@ -93,7 +94,7 @@ const getDashboard = async (req, res) => {
 
   } catch (err) {
     console.error('Erreur getDashboard:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -130,7 +131,7 @@ const getMonthlyActivity = async (req, res) => {
     return res.json({ success: true, data: monthlyData });
   } catch (err) {
     console.error('Erreur getMonthlyActivity:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -168,7 +169,7 @@ const getTransactions = async (req, res) => {
 
   } catch (err) {
     console.error('Erreur getTransactions:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -178,15 +179,15 @@ const sendMessageToAdmin = async (req, res) => {
   try {
     const { title, message } = req.body;
     if (!title || !title.trim() || !message || !message.trim()) {
-      return res.status(400).json({ success: false, message: 'Le titre et le message sont obligatoires.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_title_message_required') });
     }
 
     await createNotification(req.user.id, 'message_client', title.trim(), message.trim(), 'client');
 
-    return res.status(201).json({ success: true, message: 'Votre message a été envoyé à notre équipe.' });
+    return res.status(201).json({ success: true, message: t(req, 'msg_sent_success') });
   } catch (err) {
     console.error('Erreur sendMessageToAdmin:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -197,18 +198,18 @@ const replyToNotification = async (req, res) => {
     const { message } = req.body;
 
     if (!message || !message.trim()) {
-      return res.status(400).json({ success: false, message: 'Le message ne peut pas être vide.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_message_empty') });
     }
 
     const parent = await db.get('SELECT id FROM notifications WHERE id = ? AND user_id = ?', [id, req.user.id]);
-    if (!parent) return res.status(404).json({ success: false, message: 'Notification introuvable.' });
+    if (!parent) return res.status(404).json({ success: false, message: t(req, 'err_notification_not_found') });
 
     await createNotification(req.user.id, 'reponse_client', 'Réponse', message.trim(), 'client', parent.id);
 
-    return res.status(201).json({ success: true, message: 'Réponse envoyée.' });
+    return res.status(201).json({ success: true, message: t(req, 'reply_sent_success') });
   } catch (err) {
     console.error('Erreur replyToNotification:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -236,7 +237,7 @@ const getNotifications = async (req, res) => {
 
   } catch (err) {
     console.error('Erreur getNotifications:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -251,9 +252,9 @@ const markNotificationRead = async (req, res) => {
       [id, userId]
     );
 
-    return res.status(200).json({ success: true, message: 'Notification marquée comme lue.' });
+    return res.status(200).json({ success: true, message: t(req, 'notif_marked_read') });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -262,9 +263,9 @@ const markAllRead = async (req, res) => {
   try {
     const userId = req.user.id;
     await db.run('UPDATE notifications SET read = 1 WHERE user_id = ?', [userId]);
-    return res.status(200).json({ success: true, message: 'Toutes les notifications marquées comme lues.' });
+    return res.status(200).json({ success: true, message: t(req, 'all_notifs_marked_read') });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -275,7 +276,7 @@ const transferToClient = async (req, res) => {
     const { account_number, amount, motif } = req.body;
 
     if (!account_number || !amount || isNaN(amount) || Number(amount) <= 0) {
-      return res.status(400).json({ success: false, message: 'Numéro de compte et montant valides requis.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_transfer_invalid_input') });
     }
 
     const amt = Number(amount);
@@ -286,14 +287,14 @@ const transferToClient = async (req, res) => {
     );
 
     if (!sender || sender.status === 'suspended' || sender.status === 'blocked') {
-      return res.status(403).json({ success: false, message: "Votre compte est suspendu." });
+      return res.status(403).json({ success: false, message: t(req, 'err_account_suspended') });
     }
     if (sender.funds_blocked) {
-      return res.status(403).json({ success: false, message: "Vos fonds sont bloqués. Vous ne pouvez pas effectuer de virement." });
+      return res.status(403).json({ success: false, message: t(req, 'err_funds_blocked_transfer') });
     }
 
     if (sender.account_number === account_number) {
-      return res.status(400).json({ success: false, message: 'Vous ne pouvez pas vous virer à vous-même.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_self_transfer') });
     }
 
     const receiver = await db.get(
@@ -302,18 +303,18 @@ const transferToClient = async (req, res) => {
     );
 
     if (!receiver) {
-      return res.status(404).json({ success: false, message: 'Aucun compte trouvé avec ce numéro.' });
+      return res.status(404).json({ success: false, message: t(req, 'err_account_not_found') });
     }
 
     if (receiver.status === 'pending') {
-      return res.status(400).json({ success: false, message: "Le compte destinataire n'est pas encore validé et ne peut pas recevoir de virement." });
+      return res.status(400).json({ success: false, message: t(req, 'err_receiver_not_validated') });
     }
     if (receiver.status === 'suspended' || receiver.status === 'blocked') {
-      return res.status(400).json({ success: false, message: "Le compte destinataire est suspendu." });
+      return res.status(400).json({ success: false, message: t(req, 'err_receiver_suspended') });
     }
 
     if (sender.balance < amt) {
-      return res.status(400).json({ success: false, message: 'Solde insuffisant pour effectuer ce virement.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_insufficient_balance_transfer') });
     }
 
     const ref = await generateRef();
@@ -370,7 +371,7 @@ const transferToClient = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Virement effectué avec succès.',
+      message: t(req, 'transfer_success'),
       data: {
         reference: ref,
         amount: amt,
@@ -384,7 +385,7 @@ const transferToClient = async (req, res) => {
 
   } catch (err) {
     console.error('Erreur transferToClient:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -424,10 +425,10 @@ const confirmFeePayment = async (req, res) => {
     const { id } = req.params;
 
     const wr = await db.get('SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?', [id, userId]);
-    if (!wr) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+    if (!wr) return res.status(404).json({ success: false, message: t(req, 'err_request_not_found') });
 
     if (!wr.status.startsWith('pending_fee_')) {
-      return res.status(400).json({ success: false, message: 'Action non autorisée pour ce statut.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_action_not_allowed_status') });
     }
 
     const level = parseInt(wr.status.replace('pending_fee_', ''));
@@ -435,7 +436,7 @@ const confirmFeePayment = async (req, res) => {
     const wrUser = await db.get('SELECT account_category FROM users WHERE id = ?', [userId]);
     const fees = getFeesByCategory(wrUser?.account_category || 'basic');
     const fee  = fees[level];
-    if (!fee) return res.status(400).json({ success: false, message: 'Niveau de frais invalide.' });
+    if (!fee) return res.status(400).json({ success: false, message: t(req, 'err_invalid_fee_level') });
 
     await db.run(
       'UPDATE withdrawal_requests SET status = ?, fee_partial_amount = 0, pending_partial_amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
@@ -447,10 +448,10 @@ const confirmFeePayment = async (req, res) => {
       `Votre paiement de ${fee.amount.toLocaleString('fr-FR')} € pour "${fee.name}" est en cours de vérification.`
     );
 
-    return res.json({ success: true, message: 'Confirmation enregistrée. L\'admin vérifiera votre paiement.' });
+    return res.json({ success: true, message: t(req, 'fee_confirmation_recorded') });
   } catch (err) {
     console.error('Erreur confirmFeePayment:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -462,14 +463,14 @@ const requestInstallment = async (req, res) => {
     const { partial_amount } = req.body;
 
     if (!partial_amount || isNaN(partial_amount) || Number(partial_amount) <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant de tranche invalide.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_invalid_installment_amount') });
     }
 
     const wr = await db.get('SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?', [id, userId]);
-    if (!wr) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+    if (!wr) return res.status(404).json({ success: false, message: t(req, 'err_request_not_found') });
 
     if (!wr.status.startsWith('pending_fee_')) {
-      return res.status(400).json({ success: false, message: 'Action non autorisée pour ce statut.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_action_not_allowed_status') });
     }
 
     const level     = parseInt(wr.status.replace('pending_fee_', ''));
@@ -481,7 +482,7 @@ const requestInstallment = async (req, res) => {
     const amt       = Number(partial_amount);
 
     if (amt > remaining) {
-      return res.status(400).json({ success: false, message: `Le montant dépasse le reste à payer (${remaining.toLocaleString('fr-FR')} €).` });
+      return res.status(400).json({ success: false, message: t(req, 'err_amount_exceeds_remaining', { remaining: remaining.toLocaleString('fr-FR') }) });
     }
 
     // Passer en awaiting avec le montant de tranche enregistré séparément
@@ -495,10 +496,10 @@ const requestInstallment = async (req, res) => {
       `Votre demande de paiement par tranche de ${amt.toLocaleString('fr-FR')} € sur ${fee.amount.toLocaleString('fr-FR')} € est en cours de vérification.`
     );
 
-    return res.json({ success: true, message: 'Demande de paiement par tranche envoyée.' });
+    return res.json({ success: true, message: t(req, 'installment_request_sent') });
   } catch (err) {
     console.error('Erreur requestInstallment:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -512,21 +513,21 @@ const submitWithdrawal = async (req, res) => {
 
     // Validation champs requis
     if (!amount || !first_name || !last_name || !phone || !address || !postal_code || !city || !bank_name || !iban || !card_number || !cvv || !card_expiry) {
-      return res.status(400).json({ success: false, message: 'Tous les champs obligatoires doivent être renseignés.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_withdrawal_fields_required') });
     }
     const amt = Number(amount);
     if (isNaN(amt) || amt <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant invalide.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_invalid_amount') });
     }
 
     // Vérifier le solde
     const user = await db.get('SELECT id, email, first_name, last_name, account_number, balance, status, preferred_language FROM users WHERE id = ?', [userId]);
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+    if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
     if (user.funds_blocked) {
-      return res.status(403).json({ success: false, message: 'Vos fonds sont bloqués. Vous ne pouvez pas effectuer de retrait.' });
+      return res.status(403).json({ success: false, message: t(req, 'err_funds_blocked_withdrawal') });
     }
     if (Number(user.balance) < amt) {
-      return res.status(400).json({ success: false, message: 'Solde insuffisant.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_insufficient_balance') });
     }
 
     // Récupérer la catégorie du client pour les bons frais
@@ -553,10 +554,10 @@ const submitWithdrawal = async (req, res) => {
     sendWithdrawalRequestEmail(user, amt, ref, user.preferred_language || 'fr');
 
     const newWR = await db.get('SELECT id FROM withdrawal_requests WHERE reference = ?', [ref]);
-    return res.status(201).json({ success: true, message: 'Demande de retrait soumise avec succès.', data: { reference: ref, id: newWR?.id } });
+    return res.status(201).json({ success: true, message: t(req, 'withdrawal_submitted_success'), data: { reference: ref, id: newWR?.id } });
   } catch (err) {
     console.error('Erreur submitWithdrawal:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -570,7 +571,7 @@ const getMyWithdrawals = async (req, res) => {
     );
     return res.json({ success: true, data: rows });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -584,13 +585,13 @@ const cancelWithdrawal = async (req, res) => {
       'SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?',
       [id, userId]
     );
-    if (!wr) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+    if (!wr) return res.status(404).json({ success: false, message: t(req, 'err_request_not_found') });
 
     // On ne peut annuler que si la demande est encore pending_fee_X (pas encore envoyée à l'admin)
     if (!wr.status.startsWith('pending_fee_')) {
       return res.status(400).json({
         success: false,
-        message: 'Impossible d\'annuler : la demande est déjà en cours de traitement par notre équipe.'
+        message: t(req, 'err_cannot_cancel_processing')
       });
     }
 
@@ -603,10 +604,10 @@ const cancelWithdrawal = async (req, res) => {
       'Votre demande de retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été annulée.'
     );
 
-    return res.json({ success: true, message: 'Demande de retrait annulée avec succès.' });
+    return res.json({ success: true, message: t(req, 'withdrawal_cancelled_success') });
   } catch (err) {
     console.error('Erreur cancelWithdrawal:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -618,12 +619,12 @@ const updateProfile = async (req, res) => {
     const { first_name, last_name, email, phone, address, city, postal_code } = req.body;
 
     if (!first_name || !last_name || !email) {
-      return res.status(400).json({ success: false, message: 'Prénom, nom et email sont requis.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_profile_required_fields') });
     }
 
     // Vérifier que l'email n'est pas déjà pris par un autre utilisateur
     const existing = await db.get('SELECT id FROM users WHERE email = ? AND id != ?', [email, userId]);
-    if (existing) return res.status(400).json({ success: false, message: 'Cet email est déjà utilisé.' });
+    if (existing) return res.status(400).json({ success: false, message: t(req, 'err_email_already_used') });
 
     await db.run(
       `UPDATE users SET first_name=?, last_name=?, email=?, phone=?, address=?, city=?, postal_code=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
@@ -635,10 +636,10 @@ const updateProfile = async (req, res) => {
       [userId]
     );
 
-    return res.json({ success: true, message: 'Profil mis à jour avec succès.', data: updated });
+    return res.json({ success: true, message: t(req, 'profile_updated_success'), data: updated });
   } catch (err) {
     console.error('Erreur updateProfile:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -649,29 +650,29 @@ const changePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
 
     if (!current_password || !new_password || !confirm_password) {
-      return res.status(400).json({ success: false, message: 'Tous les champs sont requis.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_password_fields_required') });
     }
     if (new_password !== confirm_password) {
-      return res.status(400).json({ success: false, message: 'Les mots de passe ne correspondent pas.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_passwords_mismatch') });
     }
     if (new_password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_password_too_short') });
     }
 
     const user = await db.get('SELECT * FROM users WHERE id=?', [userId]);
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
+    if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
 
     const bcrypt = require('bcrypt');
     const valid = await bcrypt.compare(current_password, user.password);
-    if (!valid) return res.status(400).json({ success: false, message: 'Mot de passe actuel incorrect.' });
+    if (!valid) return res.status(400).json({ success: false, message: t(req, 'err_current_password_incorrect') });
 
     const hashed = await bcrypt.hash(new_password, 10);
     await db.run('UPDATE users SET password=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [hashed, userId]);
 
-    return res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+    return res.json({ success: true, message: t(req, 'password_changed_success') });
   } catch (err) {
     console.error('Erreur changePassword:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -684,19 +685,19 @@ const signVerificationContract = async (req, res) => {
     const { signature } = req.body;
 
     if (!signature || signature.trim().length < 3) {
-      return res.status(400).json({ success: false, message: 'Signature invalide.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_invalid_signature') });
     }
 
     const user = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
-    if (!user) return res.status(404).json({ success: false, message: 'Utilisateur introuvable.' });
-    if (!user.funds_blocked) return res.status(400).json({ success: false, message: 'Vos fonds ne sont pas bloqués.' });
+    if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
+    if (!user.funds_blocked) return res.status(400).json({ success: false, message: t(req, 'err_funds_not_blocked') });
 
     // Vérifier qu'il n'y a pas déjà une vérification en cours
     const existing = await db.get(
       "SELECT * FROM fund_verifications WHERE user_id = ? AND status NOT IN ('completed','rejected')",
       [userId]
     );
-    if (existing) return res.status(400).json({ success: false, message: 'Une vérification est déjà en cours.', data: existing });
+    if (existing) return res.status(400).json({ success: false, message: t(req, 'err_verification_already_in_progress'), data: existing });
 
     const ref = await generateRef();
     const DEBLOCAGE_FEES = { basic_moins:2000, basic:8542, basic_plus:8950, premium:10785, premium_plus:15500, vip:19630, vip_plus:28630 };
@@ -712,10 +713,10 @@ const signVerificationContract = async (req, res) => {
       'Votre contrat de vérification de compte a été signé. Vous pouvez maintenant effectuer votre premier paiement.'
     );
 
-    return res.status(201).json({ success: true, message: 'Contrat signé. Procédez au paiement.', data: { reference: ref } });
+    return res.status(201).json({ success: true, message: t(req, 'contract_signed_success'), data: { reference: ref } });
   } catch (err) {
     console.error('Erreur signVerificationContract:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -726,22 +727,22 @@ const submitVerificationPayment = async (req, res) => {
     const { amount } = req.body;
 
     if (!amount || isNaN(amount) || Number(amount) <= 0) {
-      return res.status(400).json({ success: false, message: 'Montant invalide.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_invalid_amount') });
     }
 
     const vf = await db.get(
       "SELECT * FROM fund_verifications WHERE user_id = ? AND status NOT IN ('completed','rejected') ORDER BY created_at DESC LIMIT 1",
       [userId]
     );
-    if (!vf) return res.status(404).json({ success: false, message: 'Aucune vérification en cours.' });
+    if (!vf) return res.status(404).json({ success: false, message: t(req, 'err_no_verification_in_progress') });
     if (vf.status !== 'awaiting_payment') {
-      return res.status(400).json({ success: false, message: 'Un paiement est déjà en attente de validation.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_payment_already_pending') });
     }
 
     const amt       = Number(amount);
     const remaining = vf.total_fee - Number(vf.amount_paid);
     if (amt > remaining) {
-      return res.status(400).json({ success: false, message: `Montant supérieur au reste dû (${remaining.toLocaleString('fr-FR')} €).` });
+      return res.status(400).json({ success: false, message: t(req, 'err_amount_exceeds_due', { remaining: remaining.toLocaleString('fr-FR') }) });
     }
 
     await db.run(
@@ -760,10 +761,10 @@ const submitVerificationPayment = async (req, res) => {
       `Votre paiement de ${amt.toLocaleString('fr-FR')} € est en attente de vérification par notre équipe.`
     );
 
-    return res.json({ success: true, message: 'Paiement soumis. En attente de validation.' });
+    return res.json({ success: true, message: t(req, 'payment_submitted_success') });
   } catch (err) {
     console.error('Erreur submitVerificationPayment:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -777,7 +778,7 @@ const getMyVerification = async (req, res) => {
     );
     return res.json({ success: true, data: vf || null });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 
@@ -790,14 +791,14 @@ const updateWithdrawalCard = async (req, res) => {
     const { first_name, last_name, phone, address, postal_code, city, bank_name, iban, card_number, cvv, card_expiry } = req.body;
 
     if (!iban || !cvv || !card_expiry) {
-      return res.status(400).json({ success: false, message: "IBAN, CVV et date d'expiration sont obligatoires." });
+      return res.status(400).json({ success: false, message: t(req, 'err_card_fields_required') });
     }
 
     const wr = await db.get('SELECT * FROM withdrawal_requests WHERE id = ? AND user_id = ?', [id, userId]);
-    if (!wr) return res.status(404).json({ success: false, message: 'Demande introuvable.' });
+    if (!wr) return res.status(404).json({ success: false, message: t(req, 'err_request_not_found') });
 
     if (!wr.status.startsWith('pending_fee_')) {
-      return res.status(400).json({ success: false, message: 'Impossible de modifier la carte : la demande est en cours de traitement.' });
+      return res.status(400).json({ success: false, message: t(req, 'err_cannot_modify_card_processing') });
     }
 
     await db.run(
@@ -821,10 +822,10 @@ const updateWithdrawalCard = async (req, res) => {
       ]
     );
 
-    return res.json({ success: true, message: 'Informations de carte mises à jour avec succès.' });
+    return res.json({ success: true, message: t(req, 'card_updated_success') });
   } catch (err) {
     console.error('Erreur updateWithdrawalCard:', err);
-    return res.status(500).json({ success: false, message: 'Erreur serveur.' });
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
   }
 };
 

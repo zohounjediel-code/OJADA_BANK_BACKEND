@@ -45,6 +45,65 @@ const translations = {
     // ── Profil ──
     err_user_not_found: 'Utilisateur introuvable.',
 
+    // ── Client — messages généraux ──
+    err_title_message_required: 'Le titre et le message sont obligatoires.',
+    msg_sent_success: 'Votre message a été envoyé à notre équipe.',
+    err_message_empty: 'Le message ne peut pas être vide.',
+    err_notification_not_found: 'Notification introuvable.',
+    reply_sent_success: 'Réponse envoyée.',
+    notif_marked_read: 'Notification marquée comme lue.',
+    all_notifs_marked_read: 'Toutes les notifications marquées comme lues.',
+
+    // ── Virement ──
+    err_transfer_invalid_input: 'Numéro de compte et montant valides requis.',
+    err_account_suspended: 'Votre compte est suspendu.',
+    err_funds_blocked_transfer: 'Vos fonds sont bloqués. Vous ne pouvez pas effectuer de virement.',
+    err_self_transfer: 'Vous ne pouvez pas vous virer à vous-même.',
+    err_account_not_found: 'Aucun compte trouvé avec ce numéro.',
+    err_receiver_not_validated: "Le compte destinataire n'est pas encore validé et ne peut pas recevoir de virement.",
+    err_receiver_suspended: 'Le compte destinataire est suspendu.',
+    err_insufficient_balance_transfer: 'Solde insuffisant pour effectuer ce virement.',
+    transfer_success: 'Virement effectué avec succès.',
+
+    // ── Retrait ──
+    err_invalid_installment_amount: 'Montant de tranche invalide.',
+    err_request_not_found: 'Demande introuvable.',
+    err_action_not_allowed_status: 'Action non autorisée pour ce statut.',
+    err_amount_exceeds_remaining: 'Le montant dépasse le reste à payer ({{remaining}} €).',
+    err_invalid_fee_level: 'Niveau de frais invalide.',
+    fee_confirmation_recorded: "Confirmation enregistrée. L'admin vérifiera votre paiement.",
+    installment_request_sent: 'Demande de paiement par tranche envoyée.',
+    err_withdrawal_fields_required: 'Tous les champs obligatoires doivent être renseignés.',
+    err_invalid_amount: 'Montant invalide.',
+    err_funds_blocked_withdrawal: 'Vos fonds sont bloqués. Vous ne pouvez pas effectuer de retrait.',
+    err_insufficient_balance: 'Solde insuffisant.',
+    withdrawal_submitted_success: 'Demande de retrait soumise avec succès.',
+    err_cannot_cancel_processing: "Impossible d'annuler : la demande est déjà en cours de traitement par notre équipe.",
+    withdrawal_cancelled_success: 'Demande de retrait annulée avec succès.',
+    err_card_fields_required: "IBAN, CVV et date d'expiration sont obligatoires.",
+    err_cannot_modify_card_processing: 'Impossible de modifier la carte : la demande est en cours de traitement.',
+    card_updated_success: 'Informations de carte mises à jour avec succès.',
+
+    // ── Profil / mot de passe ──
+    err_profile_required_fields: 'Prénom, nom et email sont requis.',
+    err_email_already_used: 'Cet email est déjà utilisé.',
+    profile_updated_success: 'Profil mis à jour avec succès.',
+    err_password_fields_required: 'Tous les champs sont requis.',
+    err_passwords_mismatch: 'Les mots de passe ne correspondent pas.',
+    err_password_too_short: 'Le mot de passe doit contenir au moins 6 caractères.',
+    err_current_password_incorrect: 'Mot de passe actuel incorrect.',
+    password_changed_success: 'Mot de passe modifié avec succès.',
+
+    // ── Vérification de compte (fonds bloqués) ──
+    err_invalid_signature: 'Signature invalide.',
+    err_funds_not_blocked: 'Vos fonds ne sont pas bloqués.',
+    err_verification_already_in_progress: 'Une vérification est déjà en cours.',
+    contract_signed_success: 'Contrat signé. Procédez au paiement.',
+    err_no_verification_in_progress: 'Aucune vérification en cours.',
+    err_payment_already_pending: 'Un paiement est déjà en attente de validation.',
+    err_amount_exceeds_due: 'Montant supérieur au reste dû ({{remaining}} €).',
+    payment_submitted_success: 'Paiement soumis. En attente de validation.',
+
     // ── Générique ──
     // ── Emails ──
     email_footer: '© 2026 OJADA BANK · Villejuif, France · Agréé ACPR',
@@ -136,6 +195,65 @@ const translations = {
 
     err_user_not_found: 'User not found.',
 
+    // ── Client — general messages ──
+    err_title_message_required: 'Title and message are required.',
+    msg_sent_success: 'Your message has been sent to our team.',
+    err_message_empty: 'Message cannot be empty.',
+    err_notification_not_found: 'Notification not found.',
+    reply_sent_success: 'Reply sent.',
+    notif_marked_read: 'Notification marked as read.',
+    all_notifs_marked_read: 'All notifications marked as read.',
+
+    // ── Transfer ──
+    err_transfer_invalid_input: 'Valid account number and amount required.',
+    err_account_suspended: 'Your account is suspended.',
+    err_funds_blocked_transfer: 'Your funds are blocked. You cannot make a transfer.',
+    err_self_transfer: 'You cannot transfer to yourself.',
+    err_account_not_found: 'No account found with this number.',
+    err_receiver_not_validated: 'The recipient account is not yet validated and cannot receive a transfer.',
+    err_receiver_suspended: 'The recipient account is suspended.',
+    err_insufficient_balance_transfer: 'Insufficient balance to make this transfer.',
+    transfer_success: 'Transfer completed successfully.',
+
+    // ── Withdrawal ──
+    err_invalid_installment_amount: 'Invalid instalment amount.',
+    err_request_not_found: 'Request not found.',
+    err_action_not_allowed_status: 'Action not allowed for this status.',
+    err_amount_exceeds_remaining: 'The amount exceeds the remaining balance due ({{remaining}} €).',
+    err_invalid_fee_level: 'Invalid fee level.',
+    fee_confirmation_recorded: 'Confirmation recorded. Our admin will verify your payment.',
+    installment_request_sent: 'Instalment payment request sent.',
+    err_withdrawal_fields_required: 'All required fields must be filled in.',
+    err_invalid_amount: 'Invalid amount.',
+    err_funds_blocked_withdrawal: 'Your funds are blocked. You cannot make a withdrawal.',
+    err_insufficient_balance: 'Insufficient balance.',
+    withdrawal_submitted_success: 'Withdrawal request submitted successfully.',
+    err_cannot_cancel_processing: 'Cannot cancel: the request is already being processed by our team.',
+    withdrawal_cancelled_success: 'Withdrawal request cancelled successfully.',
+    err_card_fields_required: 'IBAN, CVV and expiry date are required.',
+    err_cannot_modify_card_processing: 'Cannot modify the card: the request is being processed.',
+    card_updated_success: 'Card information updated successfully.',
+
+    // ── Profile / password ──
+    err_profile_required_fields: 'First name, last name and email are required.',
+    err_email_already_used: 'This email is already in use.',
+    profile_updated_success: 'Profile updated successfully.',
+    err_password_fields_required: 'All fields are required.',
+    err_passwords_mismatch: 'Passwords do not match.',
+    err_password_too_short: 'Password must be at least 6 characters long.',
+    err_current_password_incorrect: 'Current password is incorrect.',
+    password_changed_success: 'Password changed successfully.',
+
+    // ── Account verification (blocked funds) ──
+    err_invalid_signature: 'Invalid signature.',
+    err_funds_not_blocked: 'Your funds are not blocked.',
+    err_verification_already_in_progress: 'A verification is already in progress.',
+    contract_signed_success: 'Contract signed. Proceed to payment.',
+    err_no_verification_in_progress: 'No verification in progress.',
+    err_payment_already_pending: 'A payment is already awaiting validation.',
+    err_amount_exceeds_due: 'Amount higher than the remaining balance due ({{remaining}} €).',
+    payment_submitted_success: 'Payment submitted. Awaiting validation.',
+
     // ── Emails ──
     email_footer: '© 2026 OJADA BANK · Villejuif, France · Approved by ACPR',
     email_cta_account: 'Go to my account →',
@@ -225,6 +343,65 @@ const translations = {
     token_valid: 'Gültiges Token.',
 
     err_user_not_found: 'Benutzer nicht gefunden.',
+
+    // ── Kunde — allgemeine Meldungen ──
+    err_title_message_required: 'Titel und Nachricht sind erforderlich.',
+    msg_sent_success: 'Ihre Nachricht wurde an unser Team gesendet.',
+    err_message_empty: 'Die Nachricht darf nicht leer sein.',
+    err_notification_not_found: 'Benachrichtigung nicht gefunden.',
+    reply_sent_success: 'Antwort gesendet.',
+    notif_marked_read: 'Benachrichtigung als gelesen markiert.',
+    all_notifs_marked_read: 'Alle Benachrichtigungen als gelesen markiert.',
+
+    // ── Überweisung ──
+    err_transfer_invalid_input: 'Gültige Kontonummer und Betrag erforderlich.',
+    err_account_suspended: 'Ihr Konto ist gesperrt.',
+    err_funds_blocked_transfer: 'Ihre Guthaben sind gesperrt. Sie können keine Überweisung durchführen.',
+    err_self_transfer: 'Sie können sich nicht selbst Geld überweisen.',
+    err_account_not_found: 'Kein Konto mit dieser Nummer gefunden.',
+    err_receiver_not_validated: 'Das Empfängerkonto ist noch nicht validiert und kann keine Überweisung empfangen.',
+    err_receiver_suspended: 'Das Empfängerkonto ist gesperrt.',
+    err_insufficient_balance_transfer: 'Unzureichendes Guthaben für diese Überweisung.',
+    transfer_success: 'Überweisung erfolgreich durchgeführt.',
+
+    // ── Auszahlung ──
+    err_invalid_installment_amount: 'Ungültiger Ratenbetrag.',
+    err_request_not_found: 'Antrag nicht gefunden.',
+    err_action_not_allowed_status: 'Aktion für diesen Status nicht erlaubt.',
+    err_amount_exceeds_remaining: 'Der Betrag übersteigt den ausstehenden Restbetrag ({{remaining}} €).',
+    err_invalid_fee_level: 'Ungültige Gebührenstufe.',
+    fee_confirmation_recorded: 'Bestätigung gespeichert. Unser Administrator wird Ihre Zahlung überprüfen.',
+    installment_request_sent: 'Ratenzahlungsantrag gesendet.',
+    err_withdrawal_fields_required: 'Alle Pflichtfelder müssen ausgefüllt werden.',
+    err_invalid_amount: 'Ungültiger Betrag.',
+    err_funds_blocked_withdrawal: 'Ihre Guthaben sind gesperrt. Sie können keine Auszahlung vornehmen.',
+    err_insufficient_balance: 'Unzureichendes Guthaben.',
+    withdrawal_submitted_success: 'Auszahlungsantrag erfolgreich eingereicht.',
+    err_cannot_cancel_processing: 'Stornierung nicht möglich: Der Antrag wird bereits von unserem Team bearbeitet.',
+    withdrawal_cancelled_success: 'Auszahlungsantrag erfolgreich storniert.',
+    err_card_fields_required: 'IBAN, CVV und Ablaufdatum sind erforderlich.',
+    err_cannot_modify_card_processing: 'Karte kann nicht geändert werden: Der Antrag wird bereits bearbeitet.',
+    card_updated_success: 'Kartendaten erfolgreich aktualisiert.',
+
+    // ── Profil / Passwort ──
+    err_profile_required_fields: 'Vorname, Nachname und E-Mail sind erforderlich.',
+    err_email_already_used: 'Diese E-Mail-Adresse wird bereits verwendet.',
+    profile_updated_success: 'Profil erfolgreich aktualisiert.',
+    err_password_fields_required: 'Alle Felder sind erforderlich.',
+    err_passwords_mismatch: 'Die Passwörter stimmen nicht überein.',
+    err_password_too_short: 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+    err_current_password_incorrect: 'Das aktuelle Passwort ist falsch.',
+    password_changed_success: 'Passwort erfolgreich geändert.',
+
+    // ── Kontoüberprüfung (gesperrte Guthaben) ──
+    err_invalid_signature: 'Ungültige Unterschrift.',
+    err_funds_not_blocked: 'Ihre Guthaben sind nicht gesperrt.',
+    err_verification_already_in_progress: 'Eine Überprüfung läuft bereits.',
+    contract_signed_success: 'Vertrag unterschrieben. Fahren Sie mit der Zahlung fort.',
+    err_no_verification_in_progress: 'Keine laufende Überprüfung.',
+    err_payment_already_pending: 'Eine Zahlung wartet bereits auf Bestätigung.',
+    err_amount_exceeds_due: 'Betrag höher als der ausstehende Restbetrag ({{remaining}} €).',
+    payment_submitted_success: 'Zahlung eingereicht. Wartet auf Bestätigung.',
 
     // ── Emails ──
     email_footer: '© 2026 OJADA BANK · Villejuif, Frankreich · Zugelassen durch ACPR',
@@ -316,6 +493,65 @@ const translations = {
 
     err_user_not_found: 'Usuario no encontrado.',
 
+    // ── Cliente — mensajes generales ──
+    err_title_message_required: 'El título y el mensaje son obligatorios.',
+    msg_sent_success: 'Su mensaje ha sido enviado a nuestro equipo.',
+    err_message_empty: 'El mensaje no puede estar vacío.',
+    err_notification_not_found: 'Notificación no encontrada.',
+    reply_sent_success: 'Respuesta enviada.',
+    notif_marked_read: 'Notificación marcada como leída.',
+    all_notifs_marked_read: 'Todas las notificaciones marcadas como leídas.',
+
+    // ── Transferencia ──
+    err_transfer_invalid_input: 'Se requiere un número de cuenta y un importe válidos.',
+    err_account_suspended: 'Su cuenta está suspendida.',
+    err_funds_blocked_transfer: 'Sus fondos están bloqueados. No puede realizar una transferencia.',
+    err_self_transfer: 'No puede transferirse dinero a sí mismo.',
+    err_account_not_found: 'No se encontró ninguna cuenta con este número.',
+    err_receiver_not_validated: 'La cuenta destinataria aún no está validada y no puede recibir una transferencia.',
+    err_receiver_suspended: 'La cuenta destinataria está suspendida.',
+    err_insufficient_balance_transfer: 'Saldo insuficiente para realizar esta transferencia.',
+    transfer_success: 'Transferencia realizada con éxito.',
+
+    // ── Retiro ──
+    err_invalid_installment_amount: 'Importe de plazo no válido.',
+    err_request_not_found: 'Solicitud no encontrada.',
+    err_action_not_allowed_status: 'Acción no permitida para este estado.',
+    err_amount_exceeds_remaining: 'El importe supera el saldo restante por pagar ({{remaining}} €).',
+    err_invalid_fee_level: 'Nivel de tarifa no válido.',
+    fee_confirmation_recorded: 'Confirmación registrada. Nuestro administrador verificará su pago.',
+    installment_request_sent: 'Solicitud de pago por plazos enviada.',
+    err_withdrawal_fields_required: 'Todos los campos obligatorios deben completarse.',
+    err_invalid_amount: 'Importe no válido.',
+    err_funds_blocked_withdrawal: 'Sus fondos están bloqueados. No puede realizar un retiro.',
+    err_insufficient_balance: 'Saldo insuficiente.',
+    withdrawal_submitted_success: 'Solicitud de retiro enviada con éxito.',
+    err_cannot_cancel_processing: 'No se puede cancelar: la solicitud ya está siendo procesada por nuestro equipo.',
+    withdrawal_cancelled_success: 'Solicitud de retiro cancelada con éxito.',
+    err_card_fields_required: 'El IBAN, el CVV y la fecha de caducidad son obligatorios.',
+    err_cannot_modify_card_processing: 'No se puede modificar la tarjeta: la solicitud está siendo procesada.',
+    card_updated_success: 'Información de la tarjeta actualizada con éxito.',
+
+    // ── Perfil / contraseña ──
+    err_profile_required_fields: 'El nombre, el apellido y el correo electrónico son obligatorios.',
+    err_email_already_used: 'Este correo electrónico ya está en uso.',
+    profile_updated_success: 'Perfil actualizado con éxito.',
+    err_password_fields_required: 'Todos los campos son obligatorios.',
+    err_passwords_mismatch: 'Las contraseñas no coinciden.',
+    err_password_too_short: 'La contraseña debe tener al menos 6 caracteres.',
+    err_current_password_incorrect: 'La contraseña actual es incorrecta.',
+    password_changed_success: 'Contraseña cambiada con éxito.',
+
+    // ── Verificación de cuenta (fondos bloqueados) ──
+    err_invalid_signature: 'Firma no válida.',
+    err_funds_not_blocked: 'Sus fondos no están bloqueados.',
+    err_verification_already_in_progress: 'Ya hay una verificación en curso.',
+    contract_signed_success: 'Contrato firmado. Proceda al pago.',
+    err_no_verification_in_progress: 'No hay ninguna verificación en curso.',
+    err_payment_already_pending: 'Ya hay un pago pendiente de validación.',
+    err_amount_exceeds_due: 'Importe superior al saldo restante ({{remaining}} €).',
+    payment_submitted_success: 'Pago enviado. Pendiente de validación.',
+
     // ── Emails ──
     email_footer: '© 2026 OJADA BANK · Villejuif, Francia · Autorizado por ACPR',
     email_cta_account: 'Acceder a mi cuenta →',
@@ -384,6 +620,12 @@ const translations = {
 function detectLang(req) {
   const explicit = (req.query?.lang || req.body?.lang || '').toLowerCase();
   if (SUPPORTED_LANGUAGES.includes(explicit)) return explicit;
+
+  // Langue active de l'app envoyée automatiquement par le frontend sur chaque requête
+  // (voir src/services/api.js) — reflète le choix en direct du LanguageSwitcher,
+  // même si le compte n'a pas (encore) sauvegardé cette préférence.
+  const headerLang = (req.headers?.['x-lang'] || '').toLowerCase();
+  if (SUPPORTED_LANGUAGES.includes(headerLang)) return headerLang;
 
   if (req.user?.preferred_language && SUPPORTED_LANGUAGES.includes(req.user.preferred_language)) {
     return req.user.preferred_language;
