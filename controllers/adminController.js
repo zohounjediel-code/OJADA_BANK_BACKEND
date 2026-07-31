@@ -398,7 +398,9 @@ const processWithdrawal = async (req, res) => {
         ['rejected', admin_note || null, id]
       );
       await createNotification(user.id, 'retrait', 'Retrait refusé ❌',
-        'Votre demande de retrait a été refusée.' + (admin_note ? ' Motif : ' + admin_note : '')
+        'Votre demande de retrait a été refusée.' + (admin_note ? ' Motif : ' + admin_note : ''),
+        'system', null,
+        { titleKey:'withdrawalRejectedTitle', bodyKey:'withdrawalRejectedBody', bodyParams:{ reason: admin_note || null } }
       );
       sendWithdrawalStatusEmail(user, Number(wr.amount), 'rejected', admin_note || null, Number(user.balance), undefined, undefined, undefined, user.preferred_language || 'fr');
       return res.json({ success: true, message: 'Demande refusée.' });
@@ -421,7 +423,10 @@ const processWithdrawal = async (req, res) => {
       );
 
       await createNotification(user.id, 'retrait', 'Échec de transaction ❌',
-        `Votre paiement de frais (niveau ${level + 1}) a échoué.${feePaid > 0 ? ' Reste à payer : ' + remaining.toLocaleString('fr-FR') + ' €.' : ''}${admin_note ? ' ' + admin_note : ''}`
+        `Votre paiement de frais (niveau ${level + 1}) a échoué.${feePaid > 0 ? ' Reste à payer : ' + remaining.toLocaleString('fr-FR') + ' €.' : ''}${admin_note ? ' ' + admin_note : ''}`,
+        'system', null,
+        { titleKey:'feeTransactionFailedTitle', titleParams:{ level: level + 1 },
+          bodyKey:'feeTransactionFailedBody', bodyParams:{ level: level + 1, remaining: feePaid > 0 ? remaining.toLocaleString('fr-FR') : null, reason: admin_note || null } }
       );
 
       return res.json({ success: true, message: 'Échec de paiement signalé. Le client reste au niveau ' + (level + 1) + '.' });
@@ -448,7 +453,10 @@ const processWithdrawal = async (req, res) => {
         );
         await createNotification(user.id, 'retrait',
           `Tranche validée ✅ — niveau ${level + 1}`,
-          `Paiement de ${partialAmt.toLocaleString('fr-FR')} € confirmé. Reste à payer : ${remaining.toLocaleString('fr-FR')} € pour "${fee.name}".`
+          `Paiement de ${partialAmt.toLocaleString('fr-FR')} € confirmé. Reste à payer : ${remaining.toLocaleString('fr-FR')} € pour "${fee.name}".`,
+          'system', null,
+          { titleKey:'installmentValidatedTitle', titleParams:{ level: level + 1 },
+            bodyKey:'installmentValidatedBody', bodyParams:{ amount: partialAmt.toLocaleString('fr-FR'), remaining: remaining.toLocaleString('fr-FR'), feeName: fee.name } }
         );
         return res.json({ success: true, message: `Tranche de ${partialAmt.toLocaleString('fr-FR')} € validée. Reste : ${remaining.toLocaleString('fr-FR')} €.` });
       } else {
@@ -462,7 +470,10 @@ const processWithdrawal = async (req, res) => {
           const nextFee = FEE_LEVELS[nextLevel];
           await createNotification(user.id, 'retrait',
             `Frais niveau ${level + 1} complétés ✅`,
-            `Tous les paiements du niveau ${level + 1} ont été validés. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
+            `Tous les paiements du niveau ${level + 1} ont été validés. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`,
+            'system', null,
+            { titleKey:'feeLevelCompletedTitle', titleParams:{ level: level + 1 },
+              bodyKey:'feeLevelCompletedBody', bodyParams:{ level: level + 1, nextFeeName: nextFee.name, nextFeeAmount: nextFee.amount.toLocaleString('fr-FR') } }
           );
           sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
         } else {
@@ -471,7 +482,9 @@ const processWithdrawal = async (req, res) => {
             ['awaiting_final', id]
           );
           await createNotification(user.id, 'retrait', 'Tous les frais validés ✅',
-            'Tous vos frais ont été confirmés. Votre retrait est en cours de traitement final.'
+            'Tous vos frais ont été confirmés. Votre retrait est en cours de traitement final.',
+            'system', null,
+            { titleKey:'allFeesValidatedTitle', bodyKey:'allFeesValidatedBody' }
           );
         }
         return res.json({ success: true, message: 'Frais niveau ' + (level + 1) + ' complétés. Niveau suivant débloqué.' });
@@ -494,7 +507,10 @@ const processWithdrawal = async (req, res) => {
         const nextFee = FEE_LEVELS[nextLevel];
         await createNotification(user.id, 'retrait',
           `Frais niveau ${level + 1} validé ✅`,
-          `Paiement confirmé. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
+          `Paiement confirmé. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`,
+          'system', null,
+          { titleKey:'feeLevelValidatedTitle', titleParams:{ level: level + 1 },
+            bodyKey:'feeLevelValidatedBody', bodyParams:{ nextFeeName: nextFee.name, nextFeeAmount: nextFee.amount.toLocaleString('fr-FR') } }
         );
         sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
       } else {
@@ -503,7 +519,9 @@ const processWithdrawal = async (req, res) => {
           ['awaiting_final', id]
         );
         await createNotification(user.id, 'retrait', 'Tous les frais validés ✅',
-          'Tous vos frais ont été confirmés. Votre retrait est en cours de traitement final.'
+          'Tous vos frais ont été confirmés. Votre retrait est en cours de traitement final.',
+          'system', null,
+          { titleKey:'allFeesValidatedTitle', bodyKey:'allFeesValidatedBody' }
         );
       }
       return res.json({ success: true, message: 'Frais niveau ' + (level + 1) + ' validé.' });
@@ -525,7 +543,10 @@ const processWithdrawal = async (req, res) => {
         const nextFee = FEE_LEVELS[nextLevel];
         await createNotification(user.id, 'retrait',
           `Étape ${level + 1} franchie ⏩`,
-          `Votre dossier a été avancé par notre équipe. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`
+          `Votre dossier a été avancé par notre équipe. Prochaine étape : ${nextFee.name} (${nextFee.amount.toLocaleString('fr-FR')} €).`,
+          'system', null,
+          { titleKey:'stepAdvancedTitle', titleParams:{ level: level + 1 },
+            bodyKey:'stepAdvancedBody', bodyParams:{ nextFeeName: nextFee.name, nextFeeAmount: nextFee.amount.toLocaleString('fr-FR') } }
         );
         sendWithdrawalStatusEmail(user, Number(wr.amount), 'fee_validated', admin_note || null, Number(user.balance), level, nextLevel, FEE_LEVELS, user.preferred_language || 'fr');
       } else {
@@ -534,7 +555,9 @@ const processWithdrawal = async (req, res) => {
           ['awaiting_final', admin_note || null, id]
         );
         await createNotification(user.id, 'retrait', 'Dossier passé à l\'étape finale ⏩',
-          'Votre dossier a été avancé par notre équipe. Votre retrait est en cours de traitement final.'
+          'Votre dossier a été avancé par notre équipe. Votre retrait est en cours de traitement final.',
+          'system', null,
+          { titleKey:'stepFinalTitle', bodyKey:'stepFinalBody' }
         );
       }
       return res.json({ success: true, message: 'Passage forcé effectué : niveau ' + (level + 1) + ' → ' + (nextLevel < FEE_LEVELS.length ? 'niveau ' + (nextLevel + 1) : 'étape finale') + '.' });
@@ -561,7 +584,9 @@ const processWithdrawal = async (req, res) => {
         ['approved', admin_note || null, id]
       );
       await createNotification(user.id, 'retrait', 'Retrait validé ✅',
-        'Votre retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été effectué. Nouveau solde : ' + newBalance.toLocaleString('fr-FR') + ' €.'
+        'Votre retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été effectué. Nouveau solde : ' + newBalance.toLocaleString('fr-FR') + ' €.',
+        'system', null,
+        { titleKey:'withdrawalApprovedTitle', bodyKey:'withdrawalApprovedBody', bodyParams:{ amount: Number(wr.amount).toLocaleString('fr-FR'), newBalance: newBalance.toLocaleString('fr-FR') } }
       );
       sendWithdrawalStatusEmail(user, Number(wr.amount), 'approved', admin_note || null, newBalance, undefined, undefined, undefined, user.preferred_language || 'fr');
       return res.json({ success: true, message: 'Retrait approuvé et solde débité.' });
@@ -608,7 +633,9 @@ const blockFunds = async (req, res) => {
     const { createNotification } = require('./clientController');
     await createNotification(id, 'securite',
       'Fonds bloqués 🔒',
-      'Vos fonds ont été temporairement bloqués. Motif : ' + reason.trim() + '. Contactez votre conseiller pour plus d\'informations.'
+      'Vos fonds ont été temporairement bloqués. Motif : ' + reason.trim() + '. Contactez votre conseiller pour plus d\'informations.',
+      'system', null,
+      { titleKey:'fundsBlockedTitle', bodyKey:'fundsBlockedBody', bodyParams:{ reason: reason.trim() } }
     );
 
     return res.json({
@@ -665,7 +692,9 @@ const processVerificationPayment = async (req, res) => {
         [admin_note || 'Compte débloqué par l\'administrateur.', id]
       );
       await createNotification(user.id, 'securite', 'Compte débloqué 🔓',
-        'Vos fonds ont été débloqués. Vous pouvez à nouveau effectuer des retraits et virements.'
+        'Vos fonds ont été débloqués. Vous pouvez à nouveau effectuer des retraits et virements.',
+        'system', null,
+        { titleKey:'fundsUnblockedTitle', bodyKey:'fundsUnblockedBody' }
       );
       return res.json({ success: true, message: 'Compte débloqué avec succès.' });
     }
@@ -681,7 +710,9 @@ const processVerificationPayment = async (req, res) => {
         [admin_note || 'Transaction échouée. Veuillez réessayer.', id]
       );
       await createNotification(user.id, 'verification', 'Échec de paiement ❌',
-        'Votre transaction a échoué. ' + (admin_note || 'Veuillez réessayer.')
+        'Votre transaction a échoué. ' + (admin_note || 'Veuillez réessayer.'),
+        'system', null,
+        { titleKey:'verifPaymentFailedTitle', bodyKey:'verifPaymentFailedBody', bodyParams:{ reason: admin_note || null } }
       );
       return res.json({ success: true, message: 'Échec signalé.' });
     }
@@ -693,7 +724,9 @@ const processVerificationPayment = async (req, res) => {
         [admin_note || 'Paiement refusé.', id]
       );
       await createNotification(user.id, 'verification', 'Paiement refusé ❌',
-        'Votre paiement a été refusé.' + (admin_note ? ' Motif : ' + admin_note : '')
+        'Votre paiement a été refusé.' + (admin_note ? ' Motif : ' + admin_note : ''),
+        'system', null,
+        { titleKey:'verifPaymentRejectedTitle', bodyKey:'verifPaymentRejectedBody', bodyParams:{ reason: admin_note || null } }
       );
       return res.json({ success: true, message: 'Paiement refusé.' });
     }
@@ -711,11 +744,16 @@ const processVerificationPayment = async (req, res) => {
 
       if (isComplete) {
         await createNotification(user.id, 'verification', 'Paiement complet ✅',
-          `Vous avez réglé la totalité des frais de vérification (${vf.total_fee.toLocaleString('fr-FR')} €). Votre dossier est en cours de traitement par notre équipe.`
+          `Vous avez réglé la totalité des frais de vérification (${vf.total_fee.toLocaleString('fr-FR')} €). Votre dossier est en cours de traitement par notre équipe.`,
+          'system', null,
+          { titleKey:'verifPaymentCompleteTitle', bodyKey:'verifPaymentCompleteBody', bodyParams:{ total: vf.total_fee.toLocaleString('fr-FR') } }
         );
       } else {
         await createNotification(user.id, 'verification', `Paiement de ${partialAmt.toLocaleString('fr-FR')} € validé ✅`,
-          `Reste à payer : ${remaining.toLocaleString('fr-FR')} € / ${vf.total_fee.toLocaleString('fr-FR')} €.`
+          `Reste à payer : ${remaining.toLocaleString('fr-FR')} € / ${vf.total_fee.toLocaleString('fr-FR')} €.`,
+          'system', null,
+          { titleKey:'verifPaymentPartialTitle', titleParams:{ amount: partialAmt.toLocaleString('fr-FR') },
+            bodyKey:'verifPaymentPartialBody', bodyParams:{ remaining: remaining.toLocaleString('fr-FR'), total: vf.total_fee.toLocaleString('fr-FR') } }
         );
       }
 
@@ -937,7 +975,7 @@ const replyToClientMessage = async (req, res) => {
     if (!root) return res.status(404).json({ success: false, message: 'Fil introuvable.' });
 
     const { createNotification } = require('./clientController');
-    await createNotification(root.user_id, 'reponse_admin', 'Réponse de notre équipe', message.trim(), 'admin', root.id);
+    await createNotification(root.user_id, 'reponse_admin', 'Réponse de notre équipe', message.trim(), 'admin', root.id, { titleKey:'replyFromTeamTitle' });
 
     return res.status(201).json({ success: true, message: 'Réponse envoyée au client.' });
   } catch (err) {

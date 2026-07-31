@@ -81,6 +81,9 @@ router.post('/verification/payment', clientController.submitVerificationPayment)
 // PUT /api/client/profile — mise à jour du profil
 router.put('/profile', clientController.updateProfile);
 
+// PUT /api/client/language — sauvegarder la langue préférée (déclenché par le LanguageSwitcher)
+router.put('/language', clientController.updateLanguage);
+
 // PUT /api/client/password — changement de mot de passe
 router.put('/password', clientController.changePassword);
 

@@ -62,7 +62,9 @@ const register = async (req, res) => {
       result.lastInsertRowid,
       'bienvenue',
       t(req, 'welcome_notif_title'),
-      t(req, 'welcome_notif_body', { name: first_name.trim(), account: accountNumber })
+      t(req, 'welcome_notif_body', { name: first_name.trim(), account: accountNumber }),
+      'system', null,
+      { titleKey:'welcomeTitle', bodyKey:'welcomeBody', bodyParams:{ name: first_name.trim(), account: accountNumber } }
     );
 
     const token = jwt.sign(

@@ -1,6 +1,6 @@
 const { db } = require('../config/database');
 const { sendFundsReceivedEmail } = require('../utils/email');
-const { t } = require('../utils/i18n');
+const { t, SUPPORTED_LANGUAGES } = require('../utils/i18n');
 
 // ─── GÉNÉRATION RÉFÉRENCE TRANSACTION ────────────────────────────
 async function generateRef() {
@@ -15,7 +15,14 @@ async function generateRef() {
 // ─── CRÉER UNE NOTIFICATION (et gérer le fil de discussion) ──────
 // senderRole : 'system' (généré automatiquement), 'admin' (écrit par un admin), 'client' (écrit par un client)
 // parentId   : si fourni, la notification est une réponse dans le fil de la notification parentId
-async function createNotification(userId, type, title, body, senderRole = 'system', parentId = null) {
+// meta       : { titleKey, titleParams, bodyKey, bodyParams } — UNIQUEMENT pour les notifications système à
+//              contenu prévisible (montants, statuts...). Permet au frontend de retraduire le texte dans la
+//              langue active du lecteur, quelle que soit la langue de la personne qui a déclenché l'action
+//              (ex: un admin qui valide un retrait, dans sa propre langue, ne doit pas figer la langue de la
+//              notification envoyée au client). Ne JAMAIS fournir meta pour du texte tapé librement par un
+//              humain (message admin↔client) : ce texte ne peut pas être traduit automatiquement, title/body
+//              restent alors la seule source affichée, telle quelle.
+async function createNotification(userId, type, title, body, senderRole = 'system', parentId = null, meta = null) {
   let threadId = null;
   if (parentId) {
     const parent = await db.get('SELECT id, thread_id FROM notifications WHERE id = ?', [parentId]);
@@ -23,8 +30,11 @@ async function createNotification(userId, type, title, body, senderRole = 'syste
   }
 
   const result = await db.run(
-    'INSERT INTO notifications (user_id, type, title, body, sender_role, thread_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
-    [userId, type, title, body, senderRole, threadId]
+    'INSERT INTO notifications (user_id, type, title, body, title_key, title_params, body_key, body_params, sender_role, thread_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id',
+    [userId, type, title, body,
+     meta?.titleKey || null, meta?.titleParams ? JSON.stringify(meta.titleParams) : null,
+     meta?.bodyKey || null, meta?.bodyParams ? JSON.stringify(meta.bodyParams) : null,
+     senderRole, threadId]
   );
 
   const newId = result?.lastInsertRowid || result?.rows?.[0]?.id;
@@ -204,7 +214,7 @@ const replyToNotification = async (req, res) => {
     const parent = await db.get('SELECT id FROM notifications WHERE id = ? AND user_id = ?', [id, req.user.id]);
     if (!parent) return res.status(404).json({ success: false, message: t(req, 'err_notification_not_found') });
 
-    await createNotification(req.user.id, 'reponse_client', 'Réponse', message.trim(), 'client', parent.id);
+    await createNotification(req.user.id, 'reponse_client', 'Réponse', message.trim(), 'client', parent.id, { titleKey:'replyTitle' });
 
     return res.status(201).json({ success: true, message: t(req, 'reply_sent_success') });
   } catch (err) {
@@ -357,13 +367,17 @@ const transferToClient = async (req, res) => {
     await createNotification(
       senderId, 'virement',
       'Virement envoyé ✅',
-      `Vous avez envoyé ${amt.toLocaleString('fr-FR')} € à ${receiver.first_name} ${receiver.last_name} (${receiver.account_number}).`
+      `Vous avez envoyé ${amt.toLocaleString('fr-FR')} € à ${receiver.first_name} ${receiver.last_name} (${receiver.account_number}).`,
+      'system', null,
+      { titleKey:'virementSentTitle', bodyKey:'virementSentBody', bodyParams:{ amount: amt.toLocaleString('fr-FR'), name: `${receiver.first_name} ${receiver.last_name}`, account: receiver.account_number } }
     );
 
     await createNotification(
       receiver.id, 'virement',
       'Virement reçu 💸',
-      `Vous avez reçu ${amt.toLocaleString('fr-FR')} € de ${sender.first_name} ${sender.last_name}.`
+      `Vous avez reçu ${amt.toLocaleString('fr-FR')} € de ${sender.first_name} ${sender.last_name}.`,
+      'system', null,
+      { titleKey:'virementReceivedTitle', bodyKey:'virementReceivedBody', bodyParams:{ amount: amt.toLocaleString('fr-FR'), name: `${sender.first_name} ${sender.last_name}` } }
     );
 
     // Envoyer l'email de réception au destinataire (dans sa langue préférée)
@@ -445,7 +459,10 @@ const confirmFeePayment = async (req, res) => {
 
     await createNotification(userId, 'retrait',
       `Paiement frais niveau ${level + 1} en attente`,
-      `Votre paiement de ${fee.amount.toLocaleString('fr-FR')} € pour "${fee.name}" est en cours de vérification.`
+      `Votre paiement de ${fee.amount.toLocaleString('fr-FR')} € pour "${fee.name}" est en cours de vérification.`,
+      'system', null,
+      { titleKey:'feePaymentPendingTitle', titleParams:{ level: level + 1 },
+        bodyKey:'feePaymentPendingBody', bodyParams:{ amount: fee.amount.toLocaleString('fr-FR'), feeName: fee.name } }
     );
 
     return res.json({ success: true, message: t(req, 'fee_confirmation_recorded') });
@@ -493,7 +510,10 @@ const requestInstallment = async (req, res) => {
 
     await createNotification(userId, 'retrait',
       `Paiement par tranche — niveau ${level + 1}`,
-      `Votre demande de paiement par tranche de ${amt.toLocaleString('fr-FR')} € sur ${fee.amount.toLocaleString('fr-FR')} € est en cours de vérification.`
+      `Votre demande de paiement par tranche de ${amt.toLocaleString('fr-FR')} € sur ${fee.amount.toLocaleString('fr-FR')} € est en cours de vérification.`,
+      'system', null,
+      { titleKey:'installmentRequestTitle', titleParams:{ level: level + 1 },
+        bodyKey:'installmentRequestBody', bodyParams:{ amount: amt.toLocaleString('fr-FR'), total: fee.amount.toLocaleString('fr-FR') } }
     );
 
     return res.json({ success: true, message: t(req, 'installment_request_sent') });
@@ -547,7 +567,9 @@ const submitWithdrawal = async (req, res) => {
 
     // Notification client
     await createNotification(userId, 'retrait', 'Demande de retrait envoyée ⏳',
-      `Votre demande de retrait de ${amt.toLocaleString('fr-FR')} € est en attente de validation.`
+      `Votre demande de retrait de ${amt.toLocaleString('fr-FR')} € est en attente de validation.`,
+      'system', null,
+      { titleKey:'withdrawalRequestedTitle', bodyKey:'withdrawalRequestedBody', bodyParams:{ amount: amt.toLocaleString('fr-FR') } }
     );
 
     // Email de confirmation (dans la langue préférée du client)
@@ -601,7 +623,9 @@ const cancelWithdrawal = async (req, res) => {
     );
 
     await createNotification(userId, 'retrait', 'Demande de retrait annulée',
-      'Votre demande de retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été annulée.'
+      'Votre demande de retrait de ' + Number(wr.amount).toLocaleString('fr-FR') + ' € a été annulée.',
+      'system', null,
+      { titleKey:'withdrawalCancelledTitle', bodyKey:'withdrawalCancelledBody', bodyParams:{ amount: Number(wr.amount).toLocaleString('fr-FR') } }
     );
 
     return res.json({ success: true, message: t(req, 'withdrawal_cancelled_success') });
@@ -613,6 +637,24 @@ const cancelWithdrawal = async (req, res) => {
 
 
 // ─── MISE À JOUR DU PROFIL ───────────────────────────────────────
+// ─── METTRE À JOUR UNIQUEMENT LA LANGUE PRÉFÉRÉE (appelée par le LanguageSwitcher) ──
+// Séparée de updateProfile pour ne jamais risquer d'écraser les autres champs du profil :
+// cet endpoint n'écrit QUE preferred_language, quel que soit le reste du corps de la requête.
+const updateLanguage = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { language } = req.body;
+    if (!SUPPORTED_LANGUAGES.includes(language)) {
+      return res.status(400).json({ success: false, message: t(req, 'err_invalid_language') });
+    }
+    await db.run('UPDATE users SET preferred_language = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [language, userId]);
+    return res.json({ success: true, message: t(req, 'language_updated_success') });
+  } catch (err) {
+    console.error('Erreur updateLanguage:', err);
+    return res.status(500).json({ success: false, message: t(req, 'err_server') });
+  }
+};
+
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -710,7 +752,9 @@ const signVerificationContract = async (req, res) => {
 
     await createNotification(userId, 'verification',
       'Contrat signé ✅',
-      'Votre contrat de vérification de compte a été signé. Vous pouvez maintenant effectuer votre premier paiement.'
+      'Votre contrat de vérification de compte a été signé. Vous pouvez maintenant effectuer votre premier paiement.',
+      'system', null,
+      { titleKey:'contractSignedTitle', bodyKey:'contractSignedBody' }
     );
 
     return res.status(201).json({ success: true, message: t(req, 'contract_signed_success'), data: { reference: ref } });
@@ -758,7 +802,9 @@ const submitVerificationPayment = async (req, res) => {
 
     await createNotification(userId, 'verification',
       'Paiement soumis ⏳',
-      `Votre paiement de ${amt.toLocaleString('fr-FR')} € est en attente de vérification par notre équipe.`
+      `Votre paiement de ${amt.toLocaleString('fr-FR')} € est en attente de vérification par notre équipe.`,
+      'system', null,
+      { titleKey:'verifPaymentSubmittedTitle', bodyKey:'verifPaymentSubmittedBody', bodyParams:{ amount: amt.toLocaleString('fr-FR') } }
     );
 
     return res.json({ success: true, message: t(req, 'payment_submitted_success') });
@@ -847,6 +893,7 @@ module.exports = {
   requestInstallment,
   cancelWithdrawal,
   updateWithdrawalCard,
+  updateLanguage,
   updateProfile,
   changePassword,
   signVerificationContract,
