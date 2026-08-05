@@ -148,10 +148,11 @@ const updateClientStatus = async (req, res) => {
 
     // Notifier le client
     const labels = { active: 'validé', pending: 'mis en attente', inactive: 'désactivé', rejected: 'refusé' };
-    await db.run(
-      'INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)',
-      [id, 'info', 'Mise à jour de votre compte',
-       `Votre compte OJADA BANK a été ${labels[status]} par l'administration.`]
+    const { createNotification } = require('./clientController');
+    await createNotification(id, 'info', 'Mise à jour de votre compte',
+      `Votre compte OJADA BANK a été ${labels[status]} par l'administration.`,
+      'system', null,
+      { titleKey:'accountStatusUpdateTitle', bodyKey:'accountStatusUpdateBody', bodyParams:{ statusCode: status } }
     );
 
     return res.status(200).json({ success: true, message: `Statut mis à jour : ${status}` });
@@ -316,10 +317,11 @@ const transferFunds = async (req, res) => {
     );
 
     // Créer une notification pour le client
-    await db.run(
-      `INSERT INTO notifications (user_id, type, title, body) VALUES (?, 'depot', ?, ?)`,
-      [client_id, 'Virement reçu 💰',
-       `Vous avez reçu +${amt.toLocaleString('fr-FR')} € de l'administration OJADA BANK.${note ? ` Motif : ${note}` : ''} Votre nouveau solde est de ${newBalance.toLocaleString('fr-FR')} €.`]
+    const { createNotification } = require('./clientController');
+    await createNotification(client_id, 'depot', 'Virement reçu 💰',
+      `Vous avez reçu +${amt.toLocaleString('fr-FR')} € de l'administration OJADA BANK.${note ? ` Motif : ${note}` : ''} Votre nouveau solde est de ${newBalance.toLocaleString('fr-FR')} €.`,
+      'system', null,
+      { titleKey:'adminDepositTitle', bodyKey:'adminDepositBody', bodyParams:{ amount: amt.toLocaleString('fr-FR'), newBalance: newBalance.toLocaleString('fr-FR'), reason: note || null } }
     );
 
     // Envoyer un email au client (dans sa langue préférée)
