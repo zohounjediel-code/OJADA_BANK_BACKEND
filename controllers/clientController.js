@@ -704,7 +704,7 @@ const changePassword = async (req, res) => {
     const user = await db.get('SELECT * FROM users WHERE id=?', [userId]);
     if (!user) return res.status(404).json({ success: false, message: t(req, 'err_user_not_found') });
 
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const valid = await bcrypt.compare(current_password, user.password);
     if (!valid) return res.status(400).json({ success: false, message: t(req, 'err_current_password_incorrect') });
 

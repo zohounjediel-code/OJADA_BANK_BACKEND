@@ -892,19 +892,29 @@ const assignIbanBic = async (req, res) => {
 const sendClientNotification = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, message } = req.body;
+    const { title, message, send_email } = req.body;
 
     if (!title || !title.trim() || !message || !message.trim()) {
       return res.status(400).json({ success: false, message: 'Le titre et le message sont obligatoires.' });
     }
 
-    const client = await db.get('SELECT id, first_name, last_name FROM users WHERE id = ?', [id]);
+    const client = await db.get('SELECT id, first_name, last_name, email, preferred_language FROM users WHERE id = ?', [id]);
     if (!client) return res.status(404).json({ success: false, message: 'Client introuvable.' });
 
     const { createNotification } = require('./clientController');
     await createNotification(client.id, 'admin', title.trim(), message.trim(), 'admin');
 
-    return res.json({ success: true, message: `Notification envoyée à ${client.first_name} ${client.last_name}.` });
+    if (send_email) {
+      const { sendAdminMessageEmail } = require('../utils/email');
+      sendAdminMessageEmail(client, title.trim(), message.trim(), client.preferred_language || 'fr');
+    }
+
+    return res.json({
+      success: true,
+      message: send_email
+        ? `Notification et email envoyés à ${client.first_name} ${client.last_name}.`
+        : `Notification envoyée à ${client.first_name} ${client.last_name}.`
+    });
 
   } catch (err) {
     console.error('Erreur sendClientNotification:', err);
@@ -915,8 +925,13 @@ const sendClientNotification = async (req, res) => {
 // ─── LISTE DES MESSAGES ENVOYÉS PAR LES CLIENTS (boîte de réception admin) ──
 const getClientMessages = async (req, res) => {
   try {
-    // On ne récupère que les racines de fil (thread_id = id) envoyées par un client,
-    // avec le dernier message du fil et le nombre total de messages
+    // On récupère les racines de fil avec le dernier message et le nombre total de messages, pour :
+    //  - les fils lancés par un client (comme avant)
+    //  - les fils lancés par un admin (ex: notification envoyée depuis la fiche client) DÈS QUE le
+    //    client y a répondu au moins une fois — sinon une notification envoyée par un admin sans
+    //    réponse n'a rien à afficher ici et resterait un fil "à sens unique" bruitant la boîte de
+    //    réception. Sans ce second cas, la réponse du client à une notification admin est bien
+    //    enregistrée en base mais devient invisible dans cette boîte de réception : c'est le bug.
     const threads = await db.all(`
       SELECT
         root.thread_id,
@@ -929,7 +944,11 @@ const getClientMessages = async (req, res) => {
       JOIN notifications last ON last.id = (
         SELECT id FROM notifications WHERE thread_id = root.thread_id ORDER BY created_at DESC LIMIT 1
       )
-      WHERE root.thread_id = root.id AND root.sender_role = 'client'
+      WHERE root.thread_id = root.id
+        AND (
+          root.sender_role = 'client'
+          OR EXISTS (SELECT 1 FROM notifications r WHERE r.thread_id = root.thread_id AND r.sender_role = 'client')
+        )
       ORDER BY last.created_at DESC
     `);
 
