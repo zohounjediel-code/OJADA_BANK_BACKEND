@@ -274,4 +274,37 @@ const sendWithdrawalStatusEmail = async (user, amount, status, adminNote, newBal
   }
 };
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendFundsReceivedEmail, sendWithdrawalRequestEmail, sendWithdrawalStatusEmail };
+// Email libre envoyé par un admin au nom d'OJADA BANK (sujet + corps tapés par l'admin, non traduisibles :
+// c'est le texte exact qu'il a écrit qui est envoyé. Seul l'habillage autour — salutation, encart
+// d'info, bouton, pied de page — est traduit dans la langue préférée du destinataire).
+const sendAdminMessageEmail = async (client, subject, message, lang = 'fr') => {
+  try {
+    const tt = (key, vars) => tRaw(lang, key, vars);
+    // Le message est tapé en texte simple par l'admin : on convertit les retours à la ligne en <br>
+    // et on échappe le HTML pour éviter tout souci d'affichage ou d'injection.
+    const escapeHtml = (str) => String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const messageHtml = escapeHtml(message).replace(/\n/g, '<br>');
+
+    const bodyHtml = `
+      <h2 style="color: #0a1628; margin-top: 0;">${tt('email_admin_message_heading')}</h2>
+      <p style="color: #0a1628; font-weight: 600;">${tt('email_admin_message_greeting', { name: client.first_name })}</p>
+      <div style="background: #f8f6f1; border-radius: 8px; padding: 20px; margin: 16px 0; color: #0a1628; line-height: 1.7; font-size: 14px;">
+        ${messageHtml}
+      </div>
+      <p style="color: #94a3b8; font-size: 12px; line-height: 1.6;">${tt('email_admin_message_note')}</p>
+      <a href="${process.env.FRONTEND_URL}/client" style="display: inline-block; background: #0a1628; color: #fff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 8px;">${tt('email_cta_account')}</a>
+    `;
+
+    await sendEmailBrevo(client.email, tt('email_admin_message_subject_prefix') + subject, emailWrapper(lang, bodyHtml));
+    console.log(`📧 Email admin envoyé à ${client.email} (${lang})`);
+    return { success: true };
+  } catch (err) {
+    console.error('❌ Erreur email admin:', err.response?.data || err.message);
+    // On remonte l'erreur (au lieu de l'avaler silencieusement) pour que l'appelant puisse
+    // informer l'admin que l'email a réellement échoué, plutôt qu'afficher un faux succès.
+    return { success: false, error: err.response?.data?.message || err.message };
+  }
+};
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendFundsReceivedEmail, sendWithdrawalRequestEmail, sendWithdrawalStatusEmail, sendAdminMessageEmail };

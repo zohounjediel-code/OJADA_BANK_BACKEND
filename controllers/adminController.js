@@ -904,9 +904,21 @@ const sendClientNotification = async (req, res) => {
     const { createNotification } = require('./clientController');
     await createNotification(client.id, 'admin', title.trim(), message.trim(), 'admin');
 
+    let emailError = null;
     if (send_email) {
       const { sendAdminMessageEmail } = require('../utils/email');
-      sendAdminMessageEmail(client, title.trim(), message.trim(), client.preferred_language || 'fr');
+      const emailResult = await sendAdminMessageEmail(client, title.trim(), message.trim(), client.preferred_language || 'fr');
+      if (!emailResult.success) emailError = emailResult.error;
+    }
+
+    if (send_email && emailError) {
+      // La notification in-app est bien passée, mais l'email a réellement échoué (Brevo, clé API,
+      // domaine non vérifié...) : on le dit clairement plutôt que d'afficher un succès trompeur.
+      // Le détail technique (emailError) est à chercher dans les logs Railway si besoin d'aller plus loin.
+      return res.status(207).json({
+        success: true,
+        message: `Notification envoyée à ${client.first_name} ${client.last_name}, mais l'email a échoué (${emailError}). Vérifiez la configuration d'envoi (BREVO_API_KEY, domaine expéditeur) et consultez les logs serveur.`
+      });
     }
 
     return res.json({
