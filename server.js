@@ -45,7 +45,10 @@ app.use(cors({
     "http://localhost:3000",
     "https://ojada-bank-frontend.vercel.app",
     "https://www.ojadabank.com",
-    "https://ojadabank.com"
+    "https://ojadabank.com",
+    "capacitor://localhost",
+    "http://localhost",
+    "https://localhost"
   ],
   credentials: true
 }));
